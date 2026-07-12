@@ -1,8 +1,16 @@
+import jwt from "jsonwebtoken";
 import { supabase } from "../utils/supabase.js";
 
-/**
- * Middleware to authenticate requests using Supabase Auth JWT.
- */
+const getJwtSecret = () => {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  if (!secret) return null;
+
+  if (secret.endsWith("=") || secret.length === 88) {
+    return Buffer.from(secret, "base64");
+  }
+  return secret;
+};
+
 export const protect = async (req, res, next) => {
   try {
     let token;
@@ -17,34 +25,52 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    // Verify token with Supabase Auth
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) {
+    let userId = null;
+    let email = null;
+    let userMetadata = {};
+
+    const jwtSecret = getJwtSecret();
+
+    if (jwtSecret) {
+      try {
+        const decoded = jwt.verify(token, jwtSecret, { algorithms: ["HS256"] });
+        userId = decoded.sub;
+        email = decoded.email;
+        userMetadata = decoded.user_metadata || {};
+      } catch (jwtErr) {
+        return res.status(401).json({
+          success: false,
+          message: `Not authorized: ${jwtErr.message}`,
+        });
+      }
+    } else {
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (error || !user) {
+        return res.status(401).json({
+          success: false,
+          message: "Not authorized, invalid token verified by Supabase API",
+        });
+      }
+      userId = user.id;
+      email = user.email;
+      userMetadata = user.user_metadata || {};
+    }
+
+    const role = userMetadata.role;
+    const fullName = userMetadata.full_name;
+
+    if (!role) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized, invalid token",
+        message: "Not authorized, user role details missing in metadata.",
       });
     }
 
-    // Fetch the associated user profile role from our public profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return res.status(401).json({
-        success: false,
-        message: "User profile not found in TransitOps profiles.",
-      });
-    }
-
-    // Attach user profile information to the request
     req.user = {
-      id: user.id,
-      email: user.email,
-      ...profile,
+      id: userId,
+      email: email,
+      full_name: fullName || "",
+      role: role,
     };
 
     next();
@@ -54,15 +80,14 @@ export const protect = async (req, res, next) => {
 };
 
 /**
- * Middleware to restrict access based on user roles.
- * @param {...string} roles - Permitted roles
+ * @param {...string} roles - Allowed roles
  */
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Forbidden: Role '${req.user?.role || "unknown"}' is not authorized to access this resource`,
+        message: `Forbidden: User with role '${req.user?.role || "unknown"}' is not authorized to access this resource`,
       });
     }
     next();
