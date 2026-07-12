@@ -1,61 +1,183 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { PageHeader, Card, DataTable, Button, Modal, Input, Select } from '../components/common';
-import { fuelLogs as initialFuelLogs } from '../data/fuelLogs';
-import { expenses as initialExpenses } from '../data/expenses';
-import { vehicles } from '../data/vehicles';
-import type { FuelLog, Expense } from '../types';
-import { formatCurrency, generateId } from '../utils';
+import type { FuelLog, Expense, Vehicle } from '../types';
+import { formatCurrency } from '../utils';
 import { useModal } from '../hooks';
+import api from '../services/api';
 
 export function FuelExpensesPage() {
-  const [fuelLogs, setFuelLogs] = useState(initialFuelLogs);
-  const [expenseList, setExpenseList] = useState(initialExpenses);
+  const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
+  const [expenseList, setExpenseList] = useState<Expense[]>([]);
+  const [vehicleList, setVehicleList] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const fuelModal = useModal();
   const expenseModal = useModal();
 
-  const handleAddFuel = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const vehicleId = form.get('vehicle') as string;
-    const vehicle = vehicles.find((v) => v.id === vehicleId);
-    const newLog: FuelLog = {
-      id: generateId(),
-      vehicleId,
-      vehicleName: vehicle?.vehicleName || '',
-      date: form.get('date') as string,
-      liters: Number(form.get('liters')),
-      cost: Number(form.get('cost')),
-    };
-    setFuelLogs((prev) => [newLog, ...prev]);
-    fuelModal.close();
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch vehicles
+      const vRes = await api('GET', 'api/vehicles');
+      const vData = Array.isArray(vRes.data) ? vRes.data : (vRes.data as any).data || [];
+      setVehicleList(vData.map((v: any) => ({
+        id: v.id,
+        registrationNumber: v.registration_number,
+        vehicleName: v.vehicle_name,
+        vehicleType: v.vehicle_type,
+        capacity: Number(v.max_load_capacity),
+        odometer: Number(v.odometer),
+        acquisitionCost: Number(v.acquisition_cost),
+        status: v.status,
+      })));
+
+      // Fetch fuel logs
+      const fRes = await api('GET', 'api/fuel');
+      const fData = Array.isArray(fRes.data) ? fRes.data : (fRes.data as any).data || [];
+      setFuelLogs(fData.map((f: any) => ({
+        id: f.id,
+        vehicleId: f.vehicle_id,
+        vehicleName: f.vehicles?.vehicle_name || 'Unknown Vehicle',
+        date: f.logged_at ? new Date(f.logged_at).toLocaleDateString() : '',
+        liters: Number(f.amount_liters),
+        cost: Number(f.cost),
+      })));
+
+      // Fetch expenses
+      const eRes = await api('GET', 'api/expenses');
+      const eData = Array.isArray(eRes.data) ? eRes.data : (eRes.data as any).data || [];
+      const mappedExpenses = eData.map((e: any) => {
+        const isToll = e.category === 'Toll';
+        const isMaint = e.category === 'Maintenance' || e.category === 'Repair';
+        
+        let tripLabel = e.trip_id || 'N/A';
+        if (!e.trip_id && e.description && e.description.includes('Trip: ')) {
+          const match = e.description.match(/Trip:\s*([^\s-]+)/);
+          if (match) tripLabel = match[1];
+        }
+
+        return {
+          id: e.id,
+          tripId: tripLabel,
+          vehicleId: e.vehicle_id || '',
+          vehicleName: e.vehicles?.vehicle_name || 'General Expense',
+          toll: isToll ? Number(e.amount) : 0,
+          maintenance: isMaint ? Number(e.amount) : 0,
+          other: (!isToll && !isMaint) ? Number(e.amount) : 0,
+          total: Number(e.amount),
+        };
+      });
+      setExpenseList(mappedExpenses);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data?.message || err.message || 'Failed to load fuel and expense logs');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddExpense = (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleAddFuel = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const vehicleId = form.get('vehicle') as string;
-    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    try {
+      setError(null);
+      const fuelData = {
+        vehicle_id: vehicleId,
+        amount_liters: Number(form.get('liters')),
+        cost: Number(form.get('cost')),
+        logged_at: form.get('date') as string,
+        notes: "Fuel Refill",
+      };
+
+      await api('POST', 'api/fuel', fuelData);
+      await fetchData();
+      fuelModal.close();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.response?.data?.message || err.message || 'Failed to add fuel log');
+    }
+  };
+
+  const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const vehicleId = form.get('vehicle') as string;
+    const tripId = form.get('tripId') as string;
     const toll = Number(form.get('toll'));
     const other = Number(form.get('other'));
     const maintenance = Number(form.get('maintenance'));
-    const newExpense: Expense = {
-      id: generateId(),
-      tripId: form.get('tripId') as string,
-      vehicleId,
-      vehicleName: vehicle?.vehicleName || '',
-      toll,
-      other,
-      maintenance,
-      total: toll + other + maintenance,
-    };
-    setExpenseList((prev) => [newExpense, ...prev]);
-    expenseModal.close();
+
+    // Check if tripId is a valid UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tripId);
+    const formattedTripId = isUuid ? tripId : null;
+
+    try {
+      setError(null);
+
+      // Create a separate call for each active category amount
+      if (toll > 0) {
+        await api('POST', 'api/expenses', {
+          vehicle_id: vehicleId || null,
+          trip_id: formattedTripId,
+          category: 'Toll',
+          amount: toll,
+          description: `Toll fee. Trip: ${tripId}`,
+        });
+      }
+      if (maintenance > 0) {
+        await api('POST', 'api/expenses', {
+          vehicle_id: vehicleId || null,
+          trip_id: formattedTripId,
+          category: 'Maintenance',
+          amount: maintenance,
+          description: `Maintenance fee. Trip: ${tripId}`,
+        });
+      }
+      if (other > 0) {
+        await api('POST', 'api/expenses', {
+          vehicle_id: vehicleId || null,
+          trip_id: formattedTripId,
+          category: 'Other',
+          amount: other,
+          description: `Other fee. Trip: ${tripId}`,
+        });
+      }
+
+      await fetchData();
+      expenseModal.close();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.response?.data?.message || err.message || 'Failed to add expense record');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader title="Fuel & Expenses" subtitle="Track fuel consumption and operational expenses" />
+
+      {error && (
+        <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
+          <AlertTriangle size={18} />
+          <p className="text-sm">{error}</p>
+        </Card>
+      )}
 
       {/* Fuel Logs */}
       <div>
@@ -113,9 +235,10 @@ export function FuelExpensesPage() {
           <Select
             name="vehicle"
             label="Vehicle"
+            required
             options={[
               { value: '', label: 'Select vehicle...' },
-              ...vehicles.map((v) => ({ value: v.id, label: v.vehicleName })),
+              ...vehicleList.map((v) => ({ value: v.id, label: v.vehicleName })),
             ]}
           />
           <Input name="date" label="Date" type="date" required />
@@ -137,9 +260,10 @@ export function FuelExpensesPage() {
           <Select
             name="vehicle"
             label="Vehicle"
+            required
             options={[
               { value: '', label: 'Select vehicle...' },
-              ...vehicles.map((v) => ({ value: v.id, label: v.vehicleName })),
+              ...vehicleList.map((v) => ({ value: v.id, label: v.vehicleName })),
             ]}
           />
           <div className="grid grid-cols-3 gap-4">

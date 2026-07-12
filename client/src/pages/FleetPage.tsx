@@ -1,17 +1,48 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { PageHeader, Card, DataTable, SearchBar, Button, Modal, Input, Select, StatusBadge } from '../components/common';
-import { vehicles as initialVehicles } from '../data/vehicles';
 import { useSearch, useModal } from '../hooks';
 import type { Vehicle, VehicleType, VehicleStatus } from '../types';
-import { formatCurrency, formatNumber, generateId } from '../utils';
+import { formatCurrency, formatNumber } from '../utils';
+import api from '../services/api';
 
 export function FleetPage() {
-  const [vehicles, setVehicles] = useState(initialVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const { isOpen, open, close } = useModal();
   const { searchQuery, setSearchQuery, filteredItems } = useSearch(vehicles, ['registrationNumber', 'vehicleName', 'vehicleType']);
+
+  const fetchVehicles = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api('GET', 'api/vehicles');
+      const backendData = Array.isArray(res.data) ? res.data : (res.data as any).data || [];
+      const mapped = backendData.map((v: any) => ({
+        id: v.id,
+        registrationNumber: v.registration_number,
+        vehicleName: v.vehicle_name,
+        vehicleType: v.vehicle_type as VehicleType,
+        capacity: Number(v.max_load_capacity),
+        odometer: Number(v.odometer),
+        acquisitionCost: Number(v.acquisition_cost),
+        status: v.status as VehicleStatus,
+      }));
+      setVehicles(mapped);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data?.message || err.message || 'Failed to load vehicles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
 
   const displayVehicles = filteredItems.filter((v) => {
     if (filterType !== 'all' && v.vehicleType !== filterType) return false;
@@ -19,22 +50,47 @@ export function FleetPage() {
     return true;
   });
 
-  const handleAddVehicle = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const newVehicle: Vehicle = {
-      id: generateId(),
-      registrationNumber: form.get('registrationNumber') as string,
-      vehicleName: form.get('vehicleName') as string,
-      vehicleType: form.get('vehicleType') as VehicleType,
-      capacity: Number(form.get('capacity')),
-      odometer: Number(form.get('odometer')),
-      acquisitionCost: Number(form.get('acquisitionCost')),
-      status: form.get('status') as VehicleStatus,
-    };
-    setVehicles((prev) => [newVehicle, ...prev]);
-    close();
+    try {
+      const vehicleData = {
+        registration_number: form.get('registrationNumber') as string,
+        vehicle_name: form.get('vehicleName') as string,
+        vehicle_type: form.get('vehicleType') as string,
+        max_load_capacity: Number(form.get('capacity')),
+        odometer: Number(form.get('odometer')),
+        acquisition_cost: Number(form.get('acquisitionCost')),
+        status: form.get('status') as string,
+      };
+
+      const res = await api('POST', 'api/vehicles', vehicleData);
+      const created = res.data?.data || res.data;
+      const mappedCreated: Vehicle = {
+        id: created.id,
+        registrationNumber: created.registration_number,
+        vehicleName: created.vehicle_name,
+        vehicleType: created.vehicle_type as VehicleType,
+        capacity: Number(created.max_load_capacity),
+        odometer: Number(created.odometer),
+        acquisitionCost: Number(created.acquisition_cost),
+        status: created.status as VehicleStatus,
+      };
+      setVehicles((prev) => [mappedCreated, ...prev]);
+      close();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.response?.data?.message || err.message || 'Failed to add vehicle');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -48,6 +104,13 @@ export function FleetPage() {
           </Button>
         }
       />
+
+      {error && (
+        <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
+          <AlertTriangle size={18} />
+          <p className="text-sm">{error}</p>
+        </Card>
+      )}
 
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-4">
