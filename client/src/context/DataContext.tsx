@@ -17,6 +17,21 @@ interface DataContextType {
   errorTrips: string | null;
   fetchTrips: (force?: boolean) => Promise<any[]>;
 
+  maintenance: any[] | null;
+  loadingMaintenance: boolean;
+  errorMaintenance: string | null;
+  fetchMaintenance: (force?: boolean) => Promise<any[]>;
+
+  fuel: any[] | null;
+  loadingFuel: boolean;
+  errorFuel: string | null;
+  fetchFuel: (force?: boolean) => Promise<any[]>;
+
+  expenses: any[] | null;
+  loadingExpenses: boolean;
+  errorExpenses: string | null;
+  fetchExpenses: (force?: boolean) => Promise<any[]>;
+
   clearCache: () => void;
 }
 
@@ -34,6 +49,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [trips, setTrips] = useState<any[] | null>(null);
   const [loadingTrips, setLoadingTrips] = useState(false);
   const [errorTrips, setErrorTrips] = useState<string | null>(null);
+
+  const [maintenance, setMaintenance] = useState<any[] | null>(null);
+  const [loadingMaintenance, setLoadingMaintenance] = useState(false);
+  const [errorMaintenance, setErrorMaintenance] = useState<string | null>(null);
+
+  const [fuel, setFuel] = useState<any[] | null>(null);
+  const [loadingFuel, setLoadingFuel] = useState(false);
+  const [errorFuel, setErrorFuel] = useState<string | null>(null);
+
+  const [expenses, setExpenses] = useState<any[] | null>(null);
+  const [loadingExpenses, setLoadingExpenses] = useState(false);
+  const [errorExpenses, setErrorExpenses] = useState<string | null>(null);
 
   const fetchVehicles = useCallback(async (force = false) => {
     if (!force && vehicles !== null) {
@@ -95,10 +122,73 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [trips]);
 
+  const fetchMaintenance = useCallback(async (force = false) => {
+    if (!force && maintenance !== null) {
+      return maintenance;
+    }
+    setLoadingMaintenance(true);
+    setErrorMaintenance(null);
+    try {
+      const res = await api('GET', 'api/maintenance');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setMaintenance(data);
+      return data;
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err.message || 'Failed to fetch maintenance logs';
+      setErrorMaintenance(msg);
+      throw err;
+    } finally {
+      setLoadingMaintenance(false);
+    }
+  }, [maintenance]);
+
+  const fetchFuel = useCallback(async (force = false) => {
+    if (!force && fuel !== null) {
+      return fuel;
+    }
+    setLoadingFuel(true);
+    setErrorFuel(null);
+    try {
+      const res = await api('GET', 'api/fuel');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setFuel(data);
+      return data;
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err.message || 'Failed to fetch fuel logs';
+      setErrorFuel(msg);
+      throw err;
+    } finally {
+      setLoadingFuel(false);
+    }
+  }, [fuel]);
+
+  const fetchExpenses = useCallback(async (force = false) => {
+    if (!force && expenses !== null) {
+      return expenses;
+    }
+    setLoadingExpenses(true);
+    setErrorExpenses(null);
+    try {
+      const res = await api('GET', 'api/expenses');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setExpenses(data);
+      return data;
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err.message || 'Failed to fetch expenses';
+      setErrorExpenses(msg);
+      throw err;
+    } finally {
+      setLoadingExpenses(false);
+    }
+  }, [expenses]);
+
   const clearCache = useCallback(() => {
     setVehicles(null);
     setDrivers(null);
     setTrips(null);
+    setMaintenance(null);
+    setFuel(null);
+    setExpenses(null);
   }, []);
 
   return (
@@ -118,6 +208,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         loadingTrips,
         errorTrips,
         fetchTrips,
+
+        maintenance,
+        loadingMaintenance,
+        errorMaintenance,
+        fetchMaintenance,
+
+        fuel,
+        loadingFuel,
+        errorFuel,
+        fetchFuel,
+
+        expenses,
+        loadingExpenses,
+        errorExpenses,
+        fetchExpenses,
 
         clearCache,
       }}

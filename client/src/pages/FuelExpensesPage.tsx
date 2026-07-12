@@ -1,30 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { PageHeader, Card, DataTable, Button, Modal, Input, Select } from '../components/common';
 import type { FuelLog, Expense, Vehicle } from '../types';
 import { formatCurrency } from '../utils';
 import { useModal } from '../hooks';
 import api from '../services/api';
+import { useData } from '../context/DataContext';
 
 export function FuelExpensesPage() {
+  const {
+    vehicles: rawVehicles, fetchVehicles,
+    fuel: rawFuel, fetchFuel, loadingFuel, errorFuel,
+    expenses: rawExpenses, fetchExpenses, loadingExpenses, errorExpenses
+  } = useData();
+
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [expenseList, setExpenseList] = useState<Expense[]>([]);
   const [vehicleList, setVehicleList] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const fuelModal = useModal();
   const expenseModal = useModal();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async (force = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      await Promise.all([
+        fetchVehicles(force),
+        fetchFuel(force),
+        fetchExpenses(force),
+      ]);
+    } catch (err) {
+      console.error('Error fetching fuel/expenses data:', err);
+    }
+  }, [fetchVehicles, fetchFuel, fetchExpenses]);
 
-      // Fetch vehicles
-      const vRes = await api('GET', 'api/vehicles');
-      const vData = Array.isArray(vRes.data) ? vRes.data : (vRes.data as any).data || [];
-      setVehicleList(vData.map((v: any) => ({
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (rawVehicles) {
+      setVehicleList(rawVehicles.map((v: any) => ({
         id: v.id,
         registrationNumber: v.registration_number,
         vehicleName: v.vehicle_name,
@@ -34,11 +49,12 @@ export function FuelExpensesPage() {
         acquisitionCost: Number(v.acquisition_cost),
         status: v.status,
       })));
+    }
+  }, [rawVehicles]);
 
-      // Fetch fuel logs
-      const fRes = await api('GET', 'api/fuel');
-      const fData = Array.isArray(fRes.data) ? fRes.data : (fRes.data as any).data || [];
-      setFuelLogs(fData.map((f: any) => ({
+  useEffect(() => {
+    if (rawFuel) {
+      setFuelLogs(rawFuel.map((f: any) => ({
         id: f.id,
         vehicleId: f.vehicle_id,
         vehicleName: f.vehicles?.vehicle_name || 'Unknown Vehicle',
@@ -46,11 +62,12 @@ export function FuelExpensesPage() {
         liters: Number(f.amount_liters),
         cost: Number(f.cost),
       })));
+    }
+  }, [rawFuel]);
 
-      // Fetch expenses
-      const eRes = await api('GET', 'api/expenses');
-      const eData = Array.isArray(eRes.data) ? eRes.data : (eRes.data as any).data || [];
-      const mappedExpenses = eData.map((e: any) => {
+  useEffect(() => {
+    if (rawExpenses) {
+      const mappedExpenses = rawExpenses.map((e: any) => {
         const isToll = e.category === 'Toll';
         const isMaint = e.category === 'Maintenance' || e.category === 'Repair';
         
@@ -72,24 +89,14 @@ export function FuelExpensesPage() {
         };
       });
       setExpenseList(mappedExpenses);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.message || err.message || 'Failed to load fuel and expense logs');
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  }, [rawExpenses]);
 
   const handleAddFuel = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const vehicleId = form.get('vehicle') as string;
     try {
-      setError(null);
       const fuelData = {
         vehicle_id: vehicleId,
         amount_liters: Number(form.get('liters')),
@@ -99,7 +106,7 @@ export function FuelExpensesPage() {
       };
 
       await api('POST', 'api/fuel', fuelData);
-      await fetchData();
+      await fetchData(true);
       fuelModal.close();
     } catch (err: any) {
       console.error(err);
@@ -152,7 +159,7 @@ export function FuelExpensesPage() {
         });
       }
 
-      await fetchData();
+      await fetchData(true);
       expenseModal.close();
     } catch (err: any) {
       console.error(err);
@@ -160,7 +167,7 @@ export function FuelExpensesPage() {
     }
   };
 
-  if (loading) {
+  if (loadingFuel || loadingExpenses) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
@@ -168,14 +175,16 @@ export function FuelExpensesPage() {
     );
   }
 
+  const combinedError = errorFuel || errorExpenses;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Fuel & Expenses" subtitle="Track fuel consumption and operational expenses" />
 
-      {error && (
+      {combinedError && (
         <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
           <AlertTriangle size={18} />
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{combinedError}</p>
         </Card>
       )}
 

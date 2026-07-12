@@ -1,27 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { PageHeader, Card, DataTable, Button, Modal, Input, Select, StatusBadge } from '../components/common';
 import type { MaintenanceLog, Vehicle } from '../types';
 import { formatCurrency } from '../utils';
 import { useModal } from '../hooks';
 import api from '../services/api';
+import { useData } from '../context/DataContext';
 
 export function MaintenancePage() {
+  const {
+    vehicles: rawVehicles, fetchVehicles,
+    maintenance: rawMaintenance, loadingMaintenance, errorMaintenance, fetchMaintenance
+  } = useData();
+
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
   const [vehicleList, setVehicleList] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { isOpen, open, close } = useModal();
 
-  const fetchMaintenance = async () => {
+  const loadData = useCallback(async (force = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      await Promise.all([
+        fetchVehicles(force),
+        fetchMaintenance(force)
+      ]);
+    } catch (err) {
+      console.error('Error fetching maintenance page data:', err);
+    }
+  }, [fetchVehicles, fetchMaintenance]);
 
-      // Load vehicles
-      const vRes = await api('GET', 'api/vehicles');
-      const vData = Array.isArray(vRes.data) ? vRes.data : (vRes.data as any).data || [];
-      setVehicleList(vData.map((v: any) => ({
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (rawVehicles) {
+      setVehicleList(rawVehicles.map((v: any) => ({
         id: v.id,
         registrationNumber: v.registration_number,
         vehicleName: v.vehicle_name,
@@ -31,11 +44,12 @@ export function MaintenancePage() {
         acquisitionCost: Number(v.acquisition_cost),
         status: v.status,
       })));
+    }
+  }, [rawVehicles]);
 
-      // Load maintenance logs
-      const mRes = await api('GET', 'api/maintenance');
-      const mData = Array.isArray(mRes.data) ? mRes.data : (mRes.data as any).data || [];
-      const mapped = mData.map((m: any) => ({
+  useEffect(() => {
+    if (rawMaintenance) {
+      const mapped = rawMaintenance.map((m: any) => ({
         id: m.id,
         vehicleId: m.vehicle_id,
         vehicleName: m.vehicles?.vehicle_name || 'Unknown Vehicle',
@@ -45,17 +59,8 @@ export function MaintenancePage() {
         status: m.status,
       }));
       setLogs(mapped);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.message || err.message || 'Failed to load maintenance logs');
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchMaintenance();
-  }, []);
+  }, [rawMaintenance]);
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -70,13 +75,18 @@ export function MaintenancePage() {
       };
 
       await api('POST', 'api/maintenance', maintData);
-      await fetchMaintenance();
+      // Refresh cache
+      await Promise.all([
+        fetchMaintenance(true),
+        fetchVehicles(true)
+      ]);
       close();
     } catch (err: any) {
       console.error(err);
       alert(err?.response?.data?.message || err.message || 'Failed to add maintenance log');
     }
   };
+
 
   const handleCompleteClick = async (m: MaintenanceLog) => {
     const finalCostInput = prompt(`Mark maintenance for "${m.vehicleName}" as Completed.\nEnter the final cost (in ₹):`, m.cost.toString());
@@ -93,14 +103,14 @@ export function MaintenancePage() {
         cost: finalCost,
         end_date: new Date().toISOString()
       });
-      await fetchMaintenance();
+      await loadData(true);
     } catch (err: any) {
       console.error(err);
       alert(err?.response?.data?.message || err.message || 'Failed to complete maintenance log');
     }
   };
 
-  if (loading) {
+  if (loadingMaintenance) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
@@ -121,10 +131,10 @@ export function MaintenancePage() {
         }
       />
 
-      {error && (
+      {errorMaintenance && (
         <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
           <AlertTriangle size={18} />
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{errorMaintenance}</p>
         </Card>
       )}
 
