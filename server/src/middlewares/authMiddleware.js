@@ -64,38 +64,11 @@ export const protect = async (req, res, next) => {
       }
       userId = user.id;
       email = user.email;
-      
-      // Fetch the associated user profile role from our public profiles table
-      let profile = null;
-      const { data, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError || !data) {
-        // Fallback to user_metadata if profiles table is missing or doesn't have the user
-        profile = {
-          role: user.user_metadata?.role || "Driver",
-          full_name: user.user_metadata?.full_name || "",
-          name: user.user_metadata?.full_name || "",
-        };
-      } else {
-        profile = data;
-      }
-
-      // Attach user profile information to the request
-      req.user = {
-        id: user.id,
-        email: user.email,
-        ...profile,
-      };
-      
-      return next();
+      userMetadata = user.user_metadata || {};
     }
 
     const role = userMetadata.role;
-    const fullName = userMetadata.full_name;
+    const fullName = userMetadata.full_name || userMetadata.fullName || userMetadata.name;
 
     if (!role) {
       return res.status(401).json({
