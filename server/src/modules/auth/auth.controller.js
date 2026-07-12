@@ -1,5 +1,5 @@
 import * as authService from "./auth.service.js";
-
+import { createDriver } from "../driver/driver.service.js";
 export const signup = async (req, res, next) => {
   try {
     const { email, password, fullName, role } = req.body;
@@ -21,6 +21,9 @@ export const signup = async (req, res, next) => {
     }
 
     const result = await authService.signUpUser(email, password, fullName, role);
+    if(role==="Driver"){
+      await driverService.createDriver(result.user.id,fullName,email);
+    }   
     return res.status(201).json({
       success: true,
       message: "User signed up successfully.",
