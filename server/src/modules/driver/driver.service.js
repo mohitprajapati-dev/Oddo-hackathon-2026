@@ -50,7 +50,7 @@ export const findDriverProfileByEmail = async (email) => {
     .from("drivers")
     .select("*")
     .eq("email", email)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw error;

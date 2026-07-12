@@ -59,6 +59,7 @@ export const loginUser = async (email, password) => {
 
   return {
     token: session.access_token,
+    refreshToken: session.refresh_token,
     user: {
       id: user.id,
       email: user.email,
@@ -67,3 +68,30 @@ export const loginUser = async (email, password) => {
     },
   };
 };
+
+export const refreshSession = async (refreshToken) => {
+  const { data, error } = await supabase.auth.refreshSession({
+    refresh_token: refreshToken,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const { session, user } = data;
+  const userMetadata = user.user_metadata || {};
+  const role = userMetadata.role;
+  const fullName = userMetadata.full_name;
+
+  return {
+    token: session.access_token,
+    refreshToken: session.refresh_token,
+    user: {
+      id: user.id,
+      email: user.email,
+      full_name: fullName || "",
+      role: role || "Driver",
+    },
+  };
+};
+

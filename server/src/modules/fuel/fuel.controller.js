@@ -1,4 +1,5 @@
 import fuelService from "./fuel.service.js";
+import { getAllowedVehicleIds } from "../../utils/authUtils.js";
 
 class FuelController {
   async addFuelLog(req, res, next) {
@@ -53,6 +54,9 @@ class FuelController {
       const filters = {};
       if (vehicle_id) filters.vehicle_id = vehicle_id;
       if (trip_id) filters.trip_id = trip_id;
+
+      // Restrict to allowed vehicles
+      filters.vehicle_ids = await getAllowedVehicleIds(req.user);
 
       const logs = await fuelService.getFuelLogs(filters);
       return res.status(200).json({

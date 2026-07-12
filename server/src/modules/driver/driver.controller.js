@@ -1,5 +1,36 @@
 import * as driverService from "./driver.service.js";
 
+export const getMyDrivers = async (req, res, next) => {
+  try {
+    const { id, role } = req.user;
+    let drivers;
+
+    if (role === "Driver") {
+      // A driver can only see their own profile
+      const profile = await driverService.getDriverDetailsById(id);
+      drivers = profile ? [profile] : [];
+    } else {
+      // Fleet Manager / others: return all drivers assigned to them
+      const { data, error } = await (await import("../../utils/supabase.js")).supabase
+        .from("drivers")
+        .select("*")
+        .eq("owner_id", id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      drivers = data || [];
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Drivers fetched successfully",
+      data: drivers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 export const updateDriverDetails = async (req, res, next) => {
   try {
     const userId = req.user.id;

@@ -132,11 +132,38 @@ export const updateTripStatus = async (req, res, next) => {
 
 export const fetchTrips = async (req, res, next) => {
   try {
-    let filters = {};
+    const { id, role } = req.user;
+    const filters = {};
 
-    if (req.user.role === "Driver") {
-      filters.driver_id = req.user.id;
+    if (role === "Driver") {
+      // Driver sees only their own trips
+      filters.driver_id = id;
+
+    } else if (role === "Fleet Manager") {
+      // Fetch both owned vehicles and owned drivers in parallel
+      const [myVehicles, myDrivers] = await Promise.all([
+        vehicleService.getVehicleByOwner(id),
+        (async () => {
+          const { supabase } = await import("../../utils/supabase.js");
+          const { data, error } = await supabase
+            .from("drivers")
+            .select("id")
+            .eq("owner_id", id);
+          if (error) throw error;
+          return data || [];
+        })(),
+      ]);
+
+      filters.vehicle_ids = myVehicles.map((v) => v.id);
+      filters.driver_ids = myDrivers.map((d) => d.id);
+
+      // Optional query-param overrides
+      const { driver_id, vehicle_id } = req.query;
+      if (driver_id) filters.driver_id = driver_id;
+      if (vehicle_id) filters.vehicle_id = vehicle_id;
+
     } else {
+      // Other roles: allow optional query params, no forced scoping
       const { driver_id, vehicle_id } = req.query;
       if (driver_id) filters.driver_id = driver_id;
       if (vehicle_id) filters.vehicle_id = vehicle_id;

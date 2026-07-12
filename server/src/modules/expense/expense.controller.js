@@ -1,4 +1,5 @@
 import expenseService from "./expense.service.js";
+import { getAllowedVehicleIds } from "../../utils/authUtils.js";
 
 class ExpenseController {
   async addExpense(req, res, next) {
@@ -46,6 +47,9 @@ class ExpenseController {
       if (vehicle_id) filters.vehicle_id = vehicle_id;
       if (trip_id) filters.trip_id = trip_id;
       if (category) filters.category = category;
+
+      // Restrict to allowed vehicles
+      filters.vehicle_ids = await getAllowedVehicleIds(req.user);
 
       const list = await expenseService.getExpenses(filters);
       return res.status(200).json({
@@ -115,6 +119,9 @@ class ExpenseController {
       const { vehicle_id } = req.query;
       const filters = {};
       if (vehicle_id) filters.vehicle_id = vehicle_id;
+
+      // Restrict to allowed vehicles
+      filters.vehicle_ids = await getAllowedVehicleIds(req.user);
 
       const costs = await expenseService.calculateOperationalCost(filters);
       return res.status(200).json({

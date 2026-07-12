@@ -2,6 +2,10 @@ import { supabase } from "../../utils/supabase.js";
 
 class FuelService {
   async getFuelLogs(filters = {}) {
+    if (Array.isArray(filters.vehicle_ids) && filters.vehicle_ids.length === 0) {
+      return [];
+    }
+
     let query = supabase.from("fuel_logs").select("*, vehicles:vehicle_id(*), trips:trip_id(*)");
 
     if (filters.vehicle_id) {
@@ -9,6 +13,9 @@ class FuelService {
     }
     if (filters.trip_id) {
       query = query.eq("trip_id", filters.trip_id);
+    }
+    if (Array.isArray(filters.vehicle_ids) && filters.vehicle_ids.length > 0) {
+      query = query.in("vehicle_id", filters.vehicle_ids);
     }
 
     const { data, error } = await query.order("logged_at", { ascending: false });

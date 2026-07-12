@@ -1,4 +1,5 @@
 import maintenanceService from "./maintenance.service.js";
+import { getAllowedVehicleIds } from "../../utils/authUtils.js";
 
 class MaintenanceController {
   async createMaintenance(req, res, next) {
@@ -43,6 +44,9 @@ class MaintenanceController {
       const filters = {};
       if (vehicle_id) filters.vehicle_id = vehicle_id;
       if (status) filters.status = status;
+
+      // Restrict to allowed vehicles
+      filters.vehicle_ids = await getAllowedVehicleIds(req.user);
 
       const list = await maintenanceService.getMaintenanceList(filters);
       return res.status(200).json({

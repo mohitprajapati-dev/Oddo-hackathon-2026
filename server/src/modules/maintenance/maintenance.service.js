@@ -2,6 +2,10 @@ import { supabase } from "../../utils/supabase.js";
 
 class MaintenanceService {
   async getMaintenanceList(filters = {}) {
+    if (Array.isArray(filters.vehicle_ids) && filters.vehicle_ids.length === 0) {
+      return [];
+    }
+
     let query = supabase.from("maintenance_logs").select("*, vehicles:vehicle_id(*)");
 
     if (filters.vehicle_id) {
@@ -9,6 +13,9 @@ class MaintenanceService {
     }
     if (filters.status) {
       query = query.eq("status", filters.status);
+    }
+    if (Array.isArray(filters.vehicle_ids) && filters.vehicle_ids.length > 0) {
+      query = query.in("vehicle_id", filters.vehicle_ids);
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });

@@ -2,6 +2,10 @@ import { supabase } from "../../utils/supabase.js";
 
 class ExpenseService {
   async getExpenses(filters = {}) {
+    if (Array.isArray(filters.vehicle_ids) && filters.vehicle_ids.length === 0) {
+      return [];
+    }
+
     let query = supabase.from("expenses").select("*, vehicles:vehicle_id(*), trips:trip_id(*)");
 
     if (filters.vehicle_id) {
@@ -12,6 +16,9 @@ class ExpenseService {
     }
     if (filters.category) {
       query = query.eq("category", filters.category);
+    }
+    if (Array.isArray(filters.vehicle_ids) && filters.vehicle_ids.length > 0) {
+      query = query.in("vehicle_id", filters.vehicle_ids);
     }
 
     const { data, error } = await query.order("logged_at", { ascending: false });
