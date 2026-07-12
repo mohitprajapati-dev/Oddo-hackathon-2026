@@ -2,13 +2,7 @@ import jwt from "jsonwebtoken";
 import { supabase } from "../utils/supabase.js";
 
 const getJwtSecret = () => {
-  const secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) return null;
-
-  if (secret.endsWith("=") || secret.length === 88) {
-    return Buffer.from(secret, "base64");
-  }
-  return secret;
+  return process.env.SUPABASE_JWT_SECRET || null;
 };
 
 export const protect = async (req, res, next) => {
@@ -40,11 +34,32 @@ export const protect = async (req, res, next) => {
     let email = null;
     let userMetadata = {};
 
-    const jwtSecret = getJwtSecret();
+    const rawSecret = getJwtSecret();
 
-    if (jwtSecret) {
+    // Decode header first to determine signing algorithm
+    const tokenInfo = jwt.decode(token, { complete: true });
+    if (!tokenInfo) {
+      return res.status(401).json({ success: false, message: "Not authorized: malformed token" });
+    }
+    const alg = tokenInfo.header.alg;
+
+    // Symmetric algorithms (HS256/384/512) can be verified locally with the secret
+    const isSymmetric = alg.startsWith("HS");
+
+    if (rawSecret && isSymmetric) {
       try {
-        const decoded = jwt.verify(token, jwtSecret, { algorithms: ["HS256"] });
+        let decoded;
+        try {
+          decoded = jwt.verify(token, rawSecret, { algorithms: [alg] });
+        } catch (err) {
+          // If that fails and secret looks base64-encoded, try decoded bytes
+          if (rawSecret.endsWith("=") || rawSecret.length >= 88) {
+            const decodedSecret = Buffer.from(rawSecret, "base64");
+            decoded = jwt.verify(token, decodedSecret, { algorithms: [alg] });
+          } else {
+            throw err;
+          }
+        }
         userId = decoded.sub;
         email = decoded.email;
         userMetadata = decoded.user_metadata || {};
@@ -55,16 +70,26 @@ export const protect = async (req, res, next) => {
         });
       }
     } else {
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (error || !user) {
-        return res.status(401).json({
+      // Asymmetric algorithms (ES256, RS256) or no local secret:
+      // Must verify via Supabase Auth API using the public key on their servers
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) {
+          return res.status(401).json({
+            success: false,
+            message: "Not authorized, invalid token verified by Supabase API",
+          });
+        }
+        userId = user.id;
+        email = user.email;
+        userMetadata = user.user_metadata || {};
+      } catch (fetchErr) {
+        return res.status(503).json({
           success: false,
-          message: "Not authorized, invalid token verified by Supabase API",
+          message: "Authentication service temporarily unreachable due to network issues.",
+          details: fetchErr.message,
         });
       }
-      userId = user.id;
-      email = user.email;
-      userMetadata = user.user_metadata || {};
     }
 
     const role = userMetadata.role;
