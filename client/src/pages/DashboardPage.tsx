@@ -1,170 +1,280 @@
-import { useState } from 'react';
+import { useDashboard } from '../hooks/useDashboard';
 import {
-  Truck,
-  CheckCircle,
-  Wrench,
-  Route,
-  Clock,
-  Users,
-  Activity,
+  Truck, CheckCircle, Wrench, Route, Clock, Users, Activity,
+  Fuel, DollarSign, ShieldCheck, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { KPICard, Card, DataTable, ProgressBar, PageHeader } from '../components/common';
-import { Select } from '../components/common';
 import { StatusBadge } from '../components/common';
-import { kpiData, vehicleStatusBreakdown } from '../data/dashboard';
-import { trips } from '../data/trips';
 
-export function DashboardPage() {
-  const [vehicleType, setVehicleType] = useState('all');
-  const [status, setStatus] = useState('all');
-  const [region, setRegion] = useState('all');
+// ─── Shared helper ────────────────────────────────────────────────────────────
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-zinc-500">
+      <p className="text-sm">{message}</p>
+    </div>
+  );
+}
 
-  const recentTrips = trips.slice(0, 5);
-
+// ─── Fleet Manager Dashboard ──────────────────────────────────────────────────
+function FleetManagerDashboard({ data }: { data: any }) {
+  const { kpis, recentTrips, vehicles } = data;
   return (
     <div className="space-y-6">
-      <PageHeader title="Dashboard" subtitle="Welcome back, Arjun. Here's your fleet overview." />
-
-      {/* Filters */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <Select
-            value={vehicleType}
-            onChange={(e) => setVehicleType(e.target.value)}
-            options={[
-              { value: 'all', label: 'All Vehicle Types' },
-              { value: 'Truck', label: 'Truck' },
-              { value: 'Van', label: 'Van' },
-              { value: 'Bus', label: 'Bus' },
-              { value: 'SUV', label: 'SUV' },
-              { value: 'Sedan', label: 'Sedan' },
-            ]}
-            className="w-44"
-          />
-          <Select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            options={[
-              { value: 'all', label: 'All Statuses' },
-              { value: 'Available', label: 'Available' },
-              { value: 'On Trip', label: 'On Trip' },
-              { value: 'In Shop', label: 'In Shop' },
-              { value: 'Retired', label: 'Retired' },
-            ]}
-            className="w-40"
-          />
-          <Select
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            options={[
-              { value: 'all', label: 'All Regions' },
-              { value: 'south', label: 'South' },
-              { value: 'north', label: 'North' },
-              { value: 'west', label: 'West' },
-              { value: 'east', label: 'East' },
-            ]}
-            className="w-40"
-          />
-        </div>
-      </Card>
-
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard
-          title="Active Vehicles"
-          value={kpiData.activeVehicles}
-          icon={<Truck size={20} />}
-          trend={{ value: 5.2, positive: true }}
-        />
-        <KPICard
-          title="Available Vehicles"
-          value={kpiData.availableVehicles}
-          icon={<CheckCircle size={20} />}
-        />
-        <KPICard
-          title="In Maintenance"
-          value={kpiData.vehiclesInMaintenance}
-          icon={<Wrench size={20} />}
-        />
-        <KPICard
-          title="Active Trips"
-          value={kpiData.activeTrips}
-          icon={<Route size={20} />}
-          trend={{ value: 12, positive: true }}
-        />
-        <KPICard
-          title="Pending Trips"
-          value={kpiData.pendingTrips}
-          icon={<Clock size={20} />}
-        />
-        <KPICard
-          title="Drivers On Duty"
-          value={kpiData.driversOnDuty}
-          icon={<Users size={20} />}
-        />
-        <KPICard
-          title="Fleet Utilization"
-          value={`${kpiData.fleetUtilization}%`}
-          icon={<Activity size={20} />}
-          trend={{ value: 3.1, positive: true }}
-        />
+        <KPICard title="Total Vehicles" value={kpis.totalVehicles} icon={<Truck size={20} />} />
+        <KPICard title="Available" value={kpis.availableVehicles} icon={<CheckCircle size={20} />} />
+        <KPICard title="In Maintenance" value={kpis.inShopVehicles} icon={<Wrench size={20} />} />
+        <KPICard title="Active Trips" value={kpis.activeTrips} icon={<Route size={20} />} trend={{ value: 12, positive: true }} />
+        <KPICard title="Pending Trips" value={kpis.pendingTrips} icon={<Clock size={20} />} />
+        <KPICard title="Drivers On Duty" value={kpis.driversOnDuty} icon={<Users size={20} />} />
+        <KPICard title="Fleet Utilization" value={`${kpis.fleetUtilization}%`} icon={<Activity size={20} />} trend={{ value: 3.1, positive: true }} />
       </div>
 
-      {/* Bottom Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Recent Trips */}
         <Card className="lg:col-span-2">
           <div className="border-b border-zinc-800 px-5 py-4">
             <h3 className="text-sm font-semibold text-zinc-100">Recent Trips</h3>
             <p className="mt-0.5 text-xs text-zinc-500">Latest dispatched and completed trips</p>
           </div>
-          <DataTable
-            columns={[
-              { key: 'tripId', label: 'Trip ID', render: (t) => <span className="font-mono text-xs text-zinc-400">{t.tripId}</span> },
-              { key: 'vehicleName', label: 'Vehicle' },
-              { key: 'driverName', label: 'Driver' },
-              { key: 'status', label: 'Status', render: (t) => <StatusBadge status={t.status} /> },
-              { key: 'eta', label: 'ETA', render: (t) => <span className="text-zinc-400">{t.eta || '—'}</span> },
-            ]}
-            data={recentTrips}
-            keyExtractor={(t) => t.id}
-          />
+          {recentTrips?.length > 0 ? (
+            <DataTable
+              columns={[
+                { key: 'id', label: 'Trip ID', render: (t: any) => <span className="font-mono text-xs text-zinc-400">{t.id?.slice(0, 8)}</span> },
+                { key: 'vehicle', label: 'Vehicle', render: (t: any) => <span>{t.vehicles?.registration_number || '—'}</span> },
+                { key: 'driver', label: 'Driver', render: (t: any) => <span>{t.drivers?.name || '—'}</span> },
+                { key: 'status', label: 'Status', render: (t: any) => <StatusBadge status={t.status} /> },
+                { key: 'destination', label: 'Destination', render: (t: any) => <span className="text-zinc-400">{t.destination || '—'}</span> },
+              ]}
+              data={recentTrips}
+              keyExtractor={(t: any) => t.id}
+            />
+          ) : (
+            <EmptyState message="No trips found for your fleet." />
+          )}
         </Card>
 
-        {/* Vehicle Status */}
         <Card className="p-5">
           <h3 className="text-sm font-semibold text-zinc-100">Vehicle Status</h3>
-          <p className="mb-5 mt-0.5 text-xs text-zinc-500">
-            {vehicleStatusBreakdown.total} total vehicles
-          </p>
+          <p className="mb-5 mt-0.5 text-xs text-zinc-500">{kpis.totalVehicles} total vehicles</p>
           <div className="space-y-4">
-            <ProgressBar
-              label="Available"
-              value={vehicleStatusBreakdown.available}
-              total={vehicleStatusBreakdown.total}
-              color="bg-emerald-500"
-            />
-            <ProgressBar
-              label="On Trip"
-              value={vehicleStatusBreakdown.onTrip}
-              total={vehicleStatusBreakdown.total}
-              color="bg-blue-500"
-            />
-            <ProgressBar
-              label="In Shop"
-              value={vehicleStatusBreakdown.inShop}
-              total={vehicleStatusBreakdown.total}
-              color="bg-amber-500"
-            />
-            <ProgressBar
-              label="Retired"
-              value={vehicleStatusBreakdown.retired}
-              total={vehicleStatusBreakdown.total}
-              color="bg-red-500"
-            />
+            <ProgressBar label="Available" value={kpis.availableVehicles} total={kpis.totalVehicles} color="bg-emerald-500" />
+            <ProgressBar label="On Trip" value={kpis.onTripVehicles} total={kpis.totalVehicles} color="bg-blue-500" />
+            <ProgressBar label="In Shop" value={kpis.inShopVehicles} total={kpis.totalVehicles} color="bg-amber-500" />
+            <ProgressBar label="Retired" value={kpis.retiredVehicles} total={kpis.totalVehicles} color="bg-red-500" />
           </div>
         </Card>
       </div>
+    </div>
+  );
+}
+
+// ─── Driver Dashboard ─────────────────────────────────────────────────────────
+function DriverDashboard({ data }: { data: any }) {
+  const { profile, kpis, trips } = data;
+  return (
+    <div className="space-y-6">
+      {profile && (
+        <Card className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-xl font-bold text-zinc-100">
+              {profile.name?.charAt(0) || '?'}
+            </div>
+            <div>
+              <p className="font-semibold text-zinc-100">{profile.name}</p>
+              <p className="text-sm text-zinc-500">{profile.email}</p>
+            </div>
+            <div className="ml-auto">
+              <StatusBadge status={profile.status || 'Active'} />
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KPICard title="Total Trips" value={kpis.totalTrips} icon={<Route size={20} />} />
+        <KPICard title="Completed" value={kpis.completedTrips} icon={<CheckCircle size={20} />} trend={{ value: 5, positive: true }} />
+        <KPICard title="In Progress" value={kpis.activeTrips} icon={<Activity size={20} />} />
+        <KPICard title="Scheduled" value={kpis.scheduledTrips} icon={<Clock size={20} />} />
+      </div>
+
+      <Card>
+        <div className="border-b border-zinc-800 px-5 py-4">
+          <h3 className="text-sm font-semibold text-zinc-100">My Trips</h3>
+          <p className="mt-0.5 text-xs text-zinc-500">All your assigned trips</p>
+        </div>
+        {trips?.length > 0 ? (
+          <DataTable
+            columns={[
+              { key: 'id', label: 'Trip ID', render: (t: any) => <span className="font-mono text-xs text-zinc-400">{t.id?.slice(0, 8)}</span> },
+              { key: 'vehicle', label: 'Vehicle', render: (t: any) => <span>{t.vehicles?.registration_number || '—'}</span> },
+              { key: 'origin', label: 'Origin', render: (t: any) => <span className="text-zinc-400">{t.origin || '—'}</span> },
+              { key: 'destination', label: 'Destination', render: (t: any) => <span className="text-zinc-400">{t.destination || '—'}</span> },
+              { key: 'status', label: 'Status', render: (t: any) => <StatusBadge status={t.status} /> },
+            ]}
+            data={trips}
+            keyExtractor={(t: any) => t.id}
+          />
+        ) : (
+          <EmptyState message="No trips assigned to you yet." />
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// ─── Safety Officer Dashboard ──────────────────────────────────────────────────
+function SafetyOfficerDashboard({ data }: { data: any }) {
+  const { kpis, drivers } = data;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KPICard title="Total Drivers" value={kpis.totalDrivers} icon={<Users size={20} />} />
+        <KPICard title="Active Drivers" value={kpis.activeDrivers} icon={<ShieldCheck size={20} />} />
+        <KPICard title="License Expiring Soon" value={kpis.licenseExpiringSoon} icon={<AlertTriangle size={20} />} trend={kpis.licenseExpiringSoon > 0 ? { value: kpis.licenseExpiringSoon, positive: false } : undefined} />
+      </div>
+
+      <Card>
+        <div className="border-b border-zinc-800 px-5 py-4">
+          <h3 className="text-sm font-semibold text-zinc-100">Driver Compliance</h3>
+          <p className="mt-0.5 text-xs text-zinc-500">All registered drivers and their status</p>
+        </div>
+        {drivers?.length > 0 ? (
+          <DataTable
+            columns={[
+              { key: 'name', label: 'Driver' },
+              { key: 'email', label: 'Email', render: (d: any) => <span className="text-zinc-400">{d.email || '—'}</span> },
+              { key: 'license', label: 'License No.', render: (d: any) => <span className="font-mono text-xs text-zinc-400">{d.license_number || '—'}</span> },
+              { key: 'expiry', label: 'License Expiry', render: (d: any) => {
+                if (!d.license_expiry) return <span className="text-zinc-500">—</span>;
+                const expiry = new Date(d.license_expiry);
+                const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                const color = daysLeft <= 30 ? 'text-rose-400' : daysLeft <= 90 ? 'text-amber-400' : 'text-zinc-400';
+                return <span className={color}>{expiry.toLocaleDateString()} ({daysLeft}d)</span>;
+              }},
+              { key: 'status', label: 'Status', render: (d: any) => <StatusBadge status={d.status || 'Active'} /> },
+            ]}
+            data={drivers}
+            keyExtractor={(d: any) => d.id}
+          />
+        ) : (
+          <EmptyState message="No drivers registered yet." />
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// ─── Financial Analyst Dashboard ──────────────────────────────────────────────
+function FinancialAnalystDashboard({ data }: { data: any }) {
+  const { kpis, fuelLogs, expenses, expenseByCategory } = data;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KPICard title="Total Expenses" value={`₹${kpis.totalExpenses?.toLocaleString('en-IN') || 0}`} icon={<DollarSign size={20} />} />
+        <KPICard title="Fuel Cost" value={`₹${kpis.totalFuelCost?.toLocaleString('en-IN') || 0}`} icon={<Fuel size={20} />} />
+        <KPICard title="Fuel Consumed" value={`${kpis.totalFuelLiters?.toFixed(1) || 0} L`} icon={<Activity size={20} />} />
+      </div>
+
+      {expenseByCategory && Object.keys(expenseByCategory).length > 0 && (
+        <Card className="p-5">
+          <h3 className="mb-4 text-sm font-semibold text-zinc-100">Expenses by Category</h3>
+          <div className="space-y-3">
+            {Object.entries(expenseByCategory).map(([category, amount]: [string, any]) => (
+              <ProgressBar
+                key={category}
+                label={category}
+                value={amount}
+                total={kpis.totalExpenses || 1}
+                color="bg-blue-500"
+              />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <div className="border-b border-zinc-800 px-5 py-4">
+            <h3 className="text-sm font-semibold text-zinc-100">Recent Fuel Logs</h3>
+          </div>
+          {fuelLogs?.length > 0 ? (
+            <DataTable
+              columns={[
+                { key: 'vehicle', label: 'Vehicle', render: (f: any) => <span>{f.vehicles?.registration_number || '—'}</span> },
+                { key: 'amount_liters', label: 'Liters', render: (f: any) => <span>{f.amount_liters} L</span> },
+                { key: 'cost', label: 'Cost', render: (f: any) => <span>₹{f.cost?.toLocaleString('en-IN')}</span> },
+                { key: 'logged_at', label: 'Date', render: (f: any) => <span className="text-zinc-400">{new Date(f.logged_at).toLocaleDateString()}</span> },
+              ]}
+              data={fuelLogs}
+              keyExtractor={(f: any) => f.id}
+            />
+          ) : (
+            <EmptyState message="No fuel logs recorded yet." />
+          )}
+        </Card>
+
+        <Card>
+          <div className="border-b border-zinc-800 px-5 py-4">
+            <h3 className="text-sm font-semibold text-zinc-100">Recent Expenses</h3>
+          </div>
+          {expenses?.length > 0 ? (
+            <DataTable
+              columns={[
+                { key: 'category', label: 'Category', render: (e: any) => <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-300">{e.category}</span> },
+                { key: 'amount', label: 'Amount', render: (e: any) => <span>₹{e.amount?.toLocaleString('en-IN')}</span> },
+                { key: 'logged_at', label: 'Date', render: (e: any) => <span className="text-zinc-400">{new Date(e.logged_at).toLocaleDateString()}</span> },
+              ]}
+              data={expenses}
+              keyExtractor={(e: any) => e.id}
+            />
+          ) : (
+            <EmptyState message="No expenses recorded yet." />
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
+export function DashboardPage() {
+  const { loading, error, role, data } = useDashboard();
+
+  const subtitles: Record<string, string> = {
+    'Fleet Manager': 'Your complete fleet overview.',
+    'Driver': 'Your trips and driving activity.',
+    'Safety Officer': 'Driver compliance and safety status.',
+    'Financial Analyst': 'Fuel consumption and expenses overview.',
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-zinc-400">
+        <AlertTriangle className="h-8 w-8 text-rose-400" />
+        <p className="text-sm text-rose-300">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Dashboard"
+        subtitle={role ? subtitles[role] : 'Welcome back.'}
+      />
+
+      {role === 'Fleet Manager' && <FleetManagerDashboard data={data} />}
+      {role === 'Driver' && <DriverDashboard data={data} />}
+      {role === 'Safety Officer' && <SafetyOfficerDashboard data={data} />}
+      {role === 'Financial Analyst' && <FinancialAnalystDashboard data={data} />}
     </div>
   );
 }

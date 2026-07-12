@@ -8,6 +8,7 @@ import driverRoutes from "./modules/driver/driver.routes.js";
 import maintenanceRoutes from "./modules/maintenance/maintenance.routes.js";
 import tripRoutes from "./modules/trip/trip.routes.js";
 import fuelRoutes from "./modules/fuel/fuel.routes.js";
+import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/trips", tripRoutes);
 
 app.use("/api/fuel", fuelRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 
 app.get("/health", (req, res) => {
