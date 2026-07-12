@@ -44,6 +44,7 @@ export function AuthPage({ mode }: AuthPageProps) {
         const res = await api('post', 'api/auth/login', { email, password });
         const resData = res.data;
         localStorage.setItem('token', resData.data.token);
+        localStorage.setItem('refreshToken', resData.data.refreshToken);
         localStorage.setItem('user', JSON.stringify(resData.data.user));
         navigate('/dashboard');
       } else {
@@ -58,6 +59,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           const loginRes = await api('post', 'api/auth/login', { email, password });
           const loginData = loginRes.data;
           localStorage.setItem('token', loginData.data.token);
+          localStorage.setItem('refreshToken', loginData.data.refreshToken);
           localStorage.setItem('user', JSON.stringify(loginData.data.user));
           navigate('/dashboard');
         } catch {
