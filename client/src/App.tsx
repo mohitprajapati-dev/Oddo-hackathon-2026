@@ -3,6 +3,7 @@ import { AppLayout } from './components/layout';
 import { DataProvider } from './context/DataContext';
 import {
   AuthPage,
+  LandingPage,
   DashboardPage,
   FleetPage,
   DriversPage,
@@ -34,7 +35,7 @@ export default function App() {
     <DataProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<LandingPage />} />
           
           {/* Public-only routes (prevent logged-in access) */}
           <Route element={<PublicRoute />}>
