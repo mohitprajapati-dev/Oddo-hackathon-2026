@@ -1,0 +1,14 @@
+import type { Trip } from '../types';
+
+export const trips: Trip[] = [
+  { id: 't1', tripId: 'TRP-2024-001', source: 'Chennai Depot', destination: 'Bangalore Hub', vehicleId: 'v2', vehicleName: 'Ashok Leyland Dost', driverId: 'd1', driverName: 'Rajesh Kumar', cargoWeight: 1100, distance: 350, status: 'Dispatched', eta: '4h 30m', createdAt: '2024-12-01' },
+  { id: 't2', tripId: 'TRP-2024-002', source: 'Mumbai Central', destination: 'Pune Warehouse', vehicleId: 'v5', vehicleName: 'BharatBenz 1217C', driverId: 'd3', driverName: 'Suresh Patel', cargoWeight: 6200, distance: 160, status: 'Dispatched', eta: '2h 15m', createdAt: '2024-12-01' },
+  { id: 't3', tripId: 'TRP-2024-003', source: 'Delhi NCR', destination: 'Jaipur Depot', vehicleId: 'v7', vehicleName: 'Force Traveller', driverId: 'd6', driverName: 'Deepak Verma', cargoWeight: 2800, distance: 280, status: 'Dispatched', eta: '3h 45m', createdAt: '2024-12-02' },
+  { id: 't4', tripId: 'TRP-2024-004', source: 'Bangalore Hub', destination: 'Hyderabad Center', vehicleId: 'v11', vehicleName: 'Ashok Leyland Boss', driverId: 'd9', driverName: 'Karthik Menon', cargoWeight: 8500, distance: 570, status: 'Dispatched', eta: '7h 20m', createdAt: '2024-12-02' },
+  { id: 't5', tripId: 'TRP-2024-005', source: 'Chennai Depot', destination: 'Coimbatore Hub', vehicleId: 'v1', vehicleName: 'Tata Ace Gold', driverId: 'd2', driverName: 'Amit Sharma', cargoWeight: 650, distance: 510, status: 'Completed', createdAt: '2024-11-28' },
+  { id: 't6', tripId: 'TRP-2024-006', source: 'Mumbai Central', destination: 'Ahmedabad Depot', vehicleId: 'v3', vehicleName: 'Mahindra Bolero Pickup', driverId: 'd5', driverName: 'Mohammed Ali', cargoWeight: 1200, distance: 530, status: 'Completed', createdAt: '2024-11-27' },
+  { id: 't7', tripId: 'TRP-2024-007', source: 'Delhi NCR', destination: 'Lucknow Warehouse', vehicleId: 'v6', vehicleName: 'Tata Ultra T7', driverId: 'd7', driverName: 'Arun Nair', cargoWeight: 3800, distance: 480, status: 'Draft', createdAt: '2024-12-03' },
+  { id: 't8', tripId: 'TRP-2024-008', source: 'Pune Warehouse', destination: 'Goa Terminal', vehicleId: 'v8', vehicleName: 'Maruti Suzuki Eeco', driverId: 'd2', driverName: 'Amit Sharma', cargoWeight: 400, distance: 310, status: 'Draft', createdAt: '2024-12-03' },
+  { id: 't9', tripId: 'TRP-2024-009', source: 'Bangalore Hub', destination: 'Kochi Depot', vehicleId: 'v12', vehicleName: 'Hyundai Staria', driverId: 'd5', driverName: 'Mohammed Ali', cargoWeight: 600, distance: 560, status: 'Cancelled', createdAt: '2024-11-25' },
+  { id: 't10', tripId: 'TRP-2024-010', source: 'Hyderabad Center', destination: 'Vizag Hub', vehicleId: 'v3', vehicleName: 'Mahindra Bolero Pickup', driverId: 'd7', driverName: 'Arun Nair', cargoWeight: 1400, distance: 620, status: 'Completed', createdAt: '2024-11-26' },
+];
