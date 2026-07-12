@@ -1,4 +1,4 @@
-# TransitOps Hackathon
+# TransitOps - Odoo Hackathon
 
 TransitOps is a fleet and transport operations dashboard built for managing vehicles, drivers, trips, maintenance, fuel expenses, and reporting in one place. The project is split into a modern React frontend and an Express/Supabase backend, making it easier to track operational data and visualize business activity from a single workflow.
 
