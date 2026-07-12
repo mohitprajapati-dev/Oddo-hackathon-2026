@@ -41,7 +41,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         {/* Notifications */}
         <button className="relative rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200">
           <Bell size={18} />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-500" />
         </button>
 
         {/* Divider */}
@@ -53,7 +53,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             <p className="text-sm font-medium text-zinc-200">Arjun Mehta</p>
             <Badge variant="info" className="mt-0.5">Dispatcher</Badge>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-sm font-semibold text-white shadow-lg shadow-violet-500/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-sm font-semibold text-zinc-950 shadow-lg shadow-orange-500/20">
             AM
           </div>
         </div>
