@@ -1,12 +1,31 @@
 import { supabase } from "../../utils/supabase.js";
 
 /**
+ * Apply optional dashboard filters to a vehicle query
+ */
+function applyVehicleFilters(query, filters = {}) {
+  if (filters.vehicle_type) {
+    query = query.eq("vehicle_type", filters.vehicle_type);
+  }
+  if (filters.vehicle_status) {
+    query = query.eq("status", filters.vehicle_status);
+  }
+  if (filters.region) {
+    query = query.eq("region", filters.region);
+  }
+  return query;
+}
+
+/**
  * Fleet Manager: all vehicles, drivers, and trips they own/manage
  */
-export const getFleetManagerSummary = async (userId) => {
+export const getFleetManagerSummary = async (userId, filters = {}) => {
   // Step 1: fetch vehicles and drivers owned by this manager
+  let vehicleQuery = supabase.from("vehicles").select("*").eq("owner_id", userId);
+  vehicleQuery = applyVehicleFilters(vehicleQuery, filters);
+
   const [vehiclesRes, driversRes] = await Promise.all([
-    supabase.from("vehicles").select("*").eq("owner_id", userId),
+    vehicleQuery,
     supabase.from("drivers").select("*").eq("owner_id", userId),
   ]);
 
@@ -38,9 +57,9 @@ export const getFleetManagerSummary = async (userId) => {
   const onTripVehicles = vehicles.filter((v) => v.status === "On Trip").length;
   const inShopVehicles = vehicles.filter((v) => v.status === "In Shop").length;
   const retiredVehicles = vehicles.filter((v) => v.status === "Retired").length;
-  const activeTrips = trips.filter((t) => t.status === "In Progress").length;
-  const pendingTrips = trips.filter((t) => t.status === "Scheduled").length;
-  const driversOnDuty = drivers.filter((d) => d.status === "On Duty").length;
+  const activeTrips = trips.filter((t) => t.status === "Dispatched").length;
+  const pendingTrips = trips.filter((t) => t.status === "Pending" || t.status === "Draft").length;
+  const driversOnDuty = drivers.filter((d) => d.status === "On Trip" || d.status === "Active").length;
   const fleetUtilization = totalVehicles > 0 ? Math.round((onTripVehicles / totalVehicles) * 100) : 0;
 
   return {
@@ -81,8 +100,8 @@ export const getDriverSummary = async (userId) => {
   const trips = tripsRes.data || [];
   const totalTrips = trips.length;
   const completedTrips = trips.filter((t) => t.status === "Completed").length;
-  const activeTrips = trips.filter((t) => t.status === "In Progress").length;
-  const scheduledTrips = trips.filter((t) => t.status === "Scheduled").length;
+  const activeTrips = trips.filter((t) => t.status === "Dispatched").length;
+  const scheduledTrips = trips.filter((t) => t.status === "Pending" || t.status === "Draft").length;
 
   return {
     profile: driverRes.data,
@@ -100,7 +119,7 @@ export const getSafetyOfficerSummary = async () => {
     supabase
       .from("trips")
       .select("driver_id, status")
-      .in("status", ["In Progress", "Scheduled"]),
+      .in("status", ["Dispatched", "Pending"]),
   ]);
 
   if (driversRes.error) throw driversRes.error;

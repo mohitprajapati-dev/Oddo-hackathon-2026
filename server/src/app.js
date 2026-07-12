@@ -10,6 +10,8 @@ import tripRoutes from "./modules/trip/trip.routes.js";
 import fuelRoutes from "./modules/fuel/fuel.routes.js";
 import expenseRoutes from "./modules/expense/expense.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
+import reportRoutes from "./modules/report/report.routes.js";
+import userRoutes from "./modules/user/user.routes.js";
 
 dotenv.config();
 
@@ -31,6 +33,8 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/fuel", fuelRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/users", userRoutes);
 
 
 app.get("/health", (req, res) => {

@@ -238,7 +238,7 @@ function FinancialAnalystDashboard({ data }: { data: any }) {
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export function DashboardPage() {
-  const { loading, error, role, data } = useDashboard();
+  const { loading, error, role, data, filters, updateFilters, clearFilters } = useDashboard();
 
   const subtitles: Record<string, string> = {
     'Fleet Manager': 'Your complete fleet overview.',
@@ -264,12 +264,69 @@ export function DashboardPage() {
     );
   }
 
+  const hasActiveFilters = filters.vehicle_type || filters.vehicle_status || filters.region;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
         subtitle={role ? subtitles[role] : 'Welcome back.'}
       />
+
+      {/* Filters — Fleet Manager only */}
+      {role === 'Fleet Manager' && (
+        <Card className="p-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">Vehicle Type</label>
+              <select
+                className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 outline-none focus:border-violet-500"
+                value={filters.vehicle_type || ''}
+                onChange={(e) => updateFilters({ ...filters, vehicle_type: e.target.value || undefined })}
+              >
+                <option value="">All Types</option>
+                <option value="Truck">Truck</option>
+                <option value="Van">Van</option>
+                <option value="Bus">Bus</option>
+                <option value="Sedan">Sedan</option>
+                <option value="SUV">SUV</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">Vehicle Status</label>
+              <select
+                className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 outline-none focus:border-violet-500"
+                value={filters.vehicle_status || ''}
+                onChange={(e) => updateFilters({ ...filters, vehicle_status: e.target.value || undefined })}
+              >
+                <option value="">All Statuses</option>
+                <option value="Available">Available</option>
+                <option value="On Trip">On Trip</option>
+                <option value="In Shop">In Shop</option>
+                <option value="Retired">Retired</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">Region</label>
+              <input
+                type="text"
+                className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 outline-none focus:border-violet-500"
+                placeholder="e.g. North"
+                value={filters.region || ''}
+                onChange={(e) => updateFilters({ ...filters, region: e.target.value || undefined })}
+              />
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="rounded-lg bg-zinc-700 px-3 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-600"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {role === 'Fleet Manager' && <FleetManagerDashboard data={data} />}
       {role === 'Driver' && <DriverDashboard data={data} />}
@@ -278,3 +335,4 @@ export function DashboardPage() {
     </div>
   );
 }
+

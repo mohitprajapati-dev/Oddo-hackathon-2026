@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, Loader2 } from 'lucide-react';
 import { PageHeader, Card, Input, Select, Button, Badge } from '../components/common';
-import { generalSettings as initialSettings, rbacRoles } from '../data/settings';
+import { rbacRoles } from '../data/settings';
 import type { Permission } from '../types';
+import api from '../services/api';
 
 function PermissionBadge({ permission }: { permission: Permission }) {
   const variants: Record<Permission, { variant: 'success' | 'info' | 'warning' | 'danger'; label: string }> = {
@@ -17,17 +18,75 @@ function PermissionBadge({ permission }: { permission: Permission }) {
 }
 
 export function SettingsPage() {
-  const [settings, setSettings] = useState(initialSettings);
+  const [settings, setSettings] = useState({
+    depotName: 'TransitOps Fleet',
+    currency: 'INR',
+    distanceUnit: 'km',
+  });
+  const [profileName, setProfileName] = useState('');
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // Load profile name on mount
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const parsed = JSON.parse(user);
+        setProfileName(parsed.full_name || parsed.name || '');
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    setSaveError(null);
+    try {
+      if (profileName.trim()) {
+        await api('PUT', 'api/users/profile', { full_name: profileName.trim() });
+        // Update local storage
+        const user = localStorage.getItem('user');
+        if (user) {
+          try {
+            const parsed = JSON.parse(user);
+            parsed.full_name = profileName.trim();
+            localStorage.setItem('user', JSON.stringify(parsed));
+          } catch {
+            // ignore
+          }
+        }
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message || err.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" subtitle="Configure your TransitOps platform" />
+
+      {/* Profile Settings */}
+      <Card className="p-6">
+        <h3 className="mb-5 text-base font-semibold text-zinc-100">Profile</h3>
+        <div className="grid max-w-2xl grid-cols-1 gap-5 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Input
+              label="Full Name"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+              placeholder="Your full name"
+            />
+          </div>
+        </div>
+      </Card>
 
       {/* General Settings */}
       <Card className="p-6">
@@ -66,7 +125,7 @@ export function SettingsPage() {
       {/* RBAC */}
       <Card className="p-6">
         <h3 className="mb-1 text-base font-semibold text-zinc-100">Role-Based Access Control</h3>
-        <p className="mb-5 text-sm text-zinc-500">Manage permissions for each role across modules</p>
+        <p className="mb-5 text-sm text-zinc-500">Permissions are enforced server-side. This table shows the current access matrix.</p>
 
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -102,13 +161,18 @@ export function SettingsPage() {
 
       {/* Save */}
       <div className="flex items-center gap-3">
-        <Button onClick={handleSave}>
-          <Save size={16} />
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           Save Settings
         </Button>
         {saved && (
           <span className="text-sm font-medium text-emerald-400 animate-pulse">
             ✓ Settings saved successfully
+          </span>
+        )}
+        {saveError && (
+          <span className="text-sm font-medium text-rose-400">
+            ✗ {saveError}
           </span>
         )}
       </div>

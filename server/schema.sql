@@ -39,10 +39,15 @@ CREATE POLICY "Allow fleet managers write to vehicles" ON public.vehicles FOR AL
 CREATE TABLE IF NOT EXISTS public.drivers (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  name TEXT,
+  email TEXT,
   license_number TEXT NOT NULL UNIQUE,
-  license_expiry_date DATE NOT NULL,
-  status TEXT NOT NULL DEFAULT 'Available' CHECK (status IN ('Available', 'Active', 'Suspended')),
+  license_category TEXT,
+  license_expiry DATE NOT NULL,
+  contact_number TEXT,
+  status TEXT NOT NULL DEFAULT 'Available' CHECK (status IN ('Available', 'On Trip', 'Off Duty', 'Suspended')),
   safety_score NUMERIC DEFAULT 100 CHECK (safety_score >= 0 AND safety_score <= 100),
+  owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -58,6 +63,9 @@ CREATE TABLE IF NOT EXISTS public.trips (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   vehicle_id UUID REFERENCES public.vehicles(id) ON DELETE RESTRICT,
   driver_id UUID REFERENCES public.drivers(id) ON DELETE RESTRICT,
+  source TEXT,
+  destination TEXT,
+  planned_distance NUMERIC CHECK (planned_distance >= 0),
   status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Pending', 'Dispatched', 'Completed', 'Cancelled')),
   cargo_weight_kg NUMERIC NOT NULL CHECK (cargo_weight_kg >= 0),
   route_details JSONB,

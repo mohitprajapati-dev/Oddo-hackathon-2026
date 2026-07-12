@@ -13,6 +13,9 @@ interface Trip {
   driver_id: string;
   cargo_weight_kg: number;
   route_details: string | null;
+  source: string | null;
+  destination: string | null;
+  planned_distance: number | null;
   status: TripStatus;
   created_at: string;
   dispatched_at: string | null;
@@ -113,6 +116,9 @@ export function TripsPage() {
         driver_id: form.get('driver_id') as string,
         cargo_weight_kg: Number(form.get('cargo_weight_kg')),
         route_details: form.get('route_details') as string || null,
+        source: form.get('source') as string || null,
+        destination: form.get('destination') as string || null,
+        planned_distance: form.get('planned_distance') ? Number(form.get('planned_distance')) : null,
       };
       if (!payload.vehicle_id || !payload.driver_id) {
         setFormError('Please select a vehicle and a driver.');
@@ -214,6 +220,22 @@ export function TripsPage() {
               ]}
             />
             <Input
+              name="source"
+              label="Source"
+              placeholder="e.g. Mumbai"
+            />
+            <Input
+              name="destination"
+              label="Destination"
+              placeholder="e.g. Pune"
+            />
+            <Input
+              name="planned_distance"
+              label="Planned Distance (km)"
+              type="number"
+              placeholder="0"
+            />
+            <Input
               name="cargo_weight_kg"
               label="Cargo Weight (kg)"
               type="number"
@@ -223,7 +245,7 @@ export function TripsPage() {
             <Input
               name="route_details"
               label="Route Details (optional)"
-              placeholder="e.g. Mumbai → Pune via NH-48"
+              placeholder="e.g. via NH-48"
             />
 
             {formError && (
@@ -280,6 +302,21 @@ export function TripsPage() {
               {
                 key: 'driver_id', label: 'Driver',
                 render: (t) => <span>{t.drivers?.name || '—'}</span>
+              },
+              {
+                key: 'source', label: 'Route',
+                render: (t) => (
+                  <div className="text-sm">
+                    {t.source && t.destination ? (
+                      <span className="text-zinc-300">{t.source} → {t.destination}</span>
+                    ) : (
+                      <span className="text-zinc-500">—</span>
+                    )}
+                    {t.planned_distance && (
+                      <p className="text-xs text-zinc-500">{t.planned_distance} km</p>
+                    )}
+                  </div>
+                )
               },
               {
                 key: 'cargo_weight_kg', label: 'Cargo',

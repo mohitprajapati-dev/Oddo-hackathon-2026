@@ -4,7 +4,7 @@ import * as driverService from "../driver/driver.service.js";
 
 export const createTrip = async (req, res, next) => {
   try {
-    const { vehicle_id, driver_id, cargo_weight_kg, route_details } = req.body;
+    const { vehicle_id, driver_id, cargo_weight_kg, route_details, source, destination, planned_distance } = req.body;
 
     if (!vehicle_id || !driver_id || cargo_weight_kg === undefined) {
       return res.status(400).json({
@@ -29,10 +29,39 @@ export const createTrip = async (req, res, next) => {
       });
     }
 
+    if (vehicle.status === "Retired") {
+      return res.status(400).json({
+        success: false,
+        message: "Retired vehicles cannot be dispatched.",
+      });
+    }
+
+    if (vehicle.status === "In Shop") {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicles in maintenance cannot be dispatched.",
+      });
+    }
+
+    if (vehicle.status === "On Trip") {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle is already assigned to another active trip.",
+      });
+    }
+
     if (vehicle.status !== "Available") {
       return res.status(400).json({
         success: false,
         message: `Vehicle is not available. Current status: ${vehicle.status}`,
+      });
+    }
+
+    // Cargo weight validation against vehicle max load capacity
+    if (parsedWeight > Number(vehicle.max_load_capacity)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cargo weight (${parsedWeight} kg) exceeds vehicle maximum load capacity (${vehicle.max_load_capacity} kg).`,
       });
     }
 
@@ -41,6 +70,31 @@ export const createTrip = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: "Driver not found.",
+      });
+    }
+
+    // License expiry check
+    if (driver.license_expiry) {
+      const expiryDate = new Date(driver.license_expiry);
+      if (expiryDate < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: `Driver's license has expired on ${driver.license_expiry}. Cannot assign to trip.`,
+        });
+      }
+    }
+
+    if (driver.status === "Suspended") {
+      return res.status(400).json({
+        success: false,
+        message: "Suspended drivers cannot be assigned to trips.",
+      });
+    }
+
+    if (driver.status === "On Trip" || driver.status === "Active") {
+      return res.status(400).json({
+        success: false,
+        message: "Driver is already assigned to another active trip.",
       });
     }
 
@@ -56,6 +110,9 @@ export const createTrip = async (req, res, next) => {
       driver_id,
       cargo_weight_kg: parsedWeight,
       route_details: route_details || null,
+      source: source || null,
+      destination: destination || null,
+      planned_distance: planned_distance ? Number(planned_distance) : null,
       status: "Pending",
     };
 
@@ -99,7 +156,7 @@ export const updateTripStatus = async (req, res, next) => {
     if (status === "Dispatched") {
       updateData.dispatched_at = new Date().toISOString();
       nextVehicleStatus = "On Trip";
-      nextDriverStatus = "Active";
+      nextDriverStatus = "On Trip";
     } else if (status === "Completed") {
       updateData.completed_at = new Date().toISOString();
       nextVehicleStatus = "Available";
