@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import vehicleRoutes from "./modules/vehicle/vehicle.routes.js";
+import authRouter from "./modules/auth/auth.routes.js";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK" });
 });
 
+app.use("/api/auth", authRouter);
 
 app.use(errorHandler);
 
