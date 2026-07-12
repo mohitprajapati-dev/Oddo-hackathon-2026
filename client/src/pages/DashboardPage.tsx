@@ -17,7 +17,7 @@ function EmptyState({ message }: { message: string }) {
 
 // ─── Fleet Manager Dashboard ──────────────────────────────────────────────────
 function FleetManagerDashboard({ data }: { data: any }) {
-  const { kpis, recentTrips, vehicles } = data;
+  const { kpis, recentTrips } = data;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

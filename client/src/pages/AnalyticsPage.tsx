@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Fuel, Activity, DollarSign, TrendingUp, Download, Loader2 } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { KPICard, ChartCard, PageHeader, Button, Card } from '../components/common';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-async function downloadDataAsPDF(title: string, data: any[], filename: string, chartId?: string) {
+async function downloadDataAsPDF(title: string, data: any[], filename: string) {
   if (!data || data.length === 0) {
     alert("No data available to export.");
     return;
@@ -199,7 +198,7 @@ export function AnalyticsPage() {
             <Button variant="secondary" onClick={() => downloadCSV('api/reports/fuel-efficiency', 'fuel_efficiency')}>
               <Download size={14} /> Fuel CSV
             </Button>
-            <Button variant="secondary" onClick={() => downloadDataAsPDF('Fuel Efficiency Report', fuelData, 'fuel_efficiency', 'chart-fuel-efficiency')}>
+            <Button variant="secondary" onClick={() => downloadDataAsPDF('Fuel Efficiency Report', fuelData, 'fuel_efficiency')}>
               <Download size={14} /> PDF
             </Button>
           </div>
@@ -208,7 +207,7 @@ export function AnalyticsPage() {
             <Button variant="secondary" onClick={() => downloadCSV('api/reports/operational-cost', 'operational_cost')}>
               <Download size={14} /> Cost CSV
             </Button>
-            <Button variant="secondary" onClick={() => downloadDataAsPDF('Operational Cost Report', costData?.vehicles || [], 'operational_cost', 'chart-operational-cost')}>
+            <Button variant="secondary" onClick={() => downloadDataAsPDF('Operational Cost Report', costData?.vehicles || [], 'operational_cost')}>
               <Download size={14} /> PDF
             </Button>
           </div>
@@ -217,7 +216,7 @@ export function AnalyticsPage() {
             <Button variant="secondary" onClick={() => downloadCSV('api/reports/vehicle-roi', 'vehicle_roi')}>
               <Download size={14} /> ROI CSV
             </Button>
-            <Button variant="secondary" onClick={() => downloadDataAsPDF('Vehicle ROI Report', roiData, 'vehicle_roi', 'chart-roi')}>
+            <Button variant="secondary" onClick={() => downloadDataAsPDF('Vehicle ROI Report', roiData, 'vehicle_roi')}>
               <Download size={14} /> PDF
             </Button>
           </div>

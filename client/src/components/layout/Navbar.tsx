@@ -1,5 +1,4 @@
-import { Search, Menu, Bell } from 'lucide-react';
-import { useState } from 'react';
+import { Menu, Bell } from 'lucide-react';
 import { Badge } from '../common';
 
 interface NavbarProps {
@@ -7,8 +6,6 @@ interface NavbarProps {
 }
 
 export function Navbar({ onMenuClick }: NavbarProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
   const fullName = user?.full_name || user?.name || 'Guest User';

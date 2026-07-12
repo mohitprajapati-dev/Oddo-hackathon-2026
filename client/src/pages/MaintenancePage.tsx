@@ -150,8 +150,8 @@ export function MaintenancePage() {
               key: 'actions',
               label: 'Actions',
               render: (m) => (
-                m.status === 'Active' ? (
-                  <Button size="xs" variant="secondary" onClick={() => handleCompleteClick(m)}>
+                String(m.status) === 'Active' ? (
+                  <Button size="sm" variant="secondary" onClick={() => handleCompleteClick(m)}>
                     Complete
                   </Button>
                 ) : <span className="text-xs text-zinc-500">—</span>

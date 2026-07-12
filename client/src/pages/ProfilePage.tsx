@@ -9,51 +9,16 @@ import {
   Briefcase,
   Building2,
   BadgeCheck,
-  ShieldCheck,
-  Route,
-  Truck,
-  ClipboardCheck,
-  Star,
   Edit3,
   KeyRound,
   LogOut,
-  Monitor,
-  Globe,
-  Clock,
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
-import { PageHeader, Card, KPICard, DataTable, Button, Badge, Modal, Input } from '../components/common';
-import { StatusBadge } from '../components/common';
+import { PageHeader, Card, Button, Badge, Modal, Input } from '../components/common';
 import { useModal } from '../hooks';
 import api from '../services/api';
-import {
-  notificationPreferences,
-  activitySummary,
-  recentActivity,
-  securityInfo,
-  type ActivityEntry,
-} from '../data/profile';
 
-// ─── Toggle Switch ────────────────────────────────────────────────────────────
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={enabled}
-      onClick={onChange}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-900 ${
-        enabled ? 'bg-emerald-500' : 'bg-zinc-700'
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-200 ${
-          enabled ? 'translate-x-4' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  );
-}
 
 // ─── Info Row ─────────────────────────────────────────────────────────────────
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -80,7 +45,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 export function ProfilePage() {
   const navigate = useNavigate();
-  const [prefs, setPrefs] = useState(notificationPreferences);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +125,7 @@ export function ProfilePage() {
 
     try {
       // 1. Save main user details
-      const userRes = await api('PUT', 'api/users/profile', {
+      await api('PUT', 'api/users/profile', {
         full_name: formFullName,
         phone: formPhone,
         address: formAddress,
@@ -186,11 +150,7 @@ export function ProfilePage() {
     }
   };
 
-  const togglePref = (id: string) => {
-    setPrefs((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p))
-    );
-  };
+
 
   if (loading) {
     return (
@@ -426,7 +386,7 @@ export function ProfilePage() {
             <Button variant="secondary" type="button" onClick={editModal.close} disabled={saving}>
               Cancel
             </Button>
-            <Button variant="default" type="submit" disabled={saving}>
+            <Button variant="primary" type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>

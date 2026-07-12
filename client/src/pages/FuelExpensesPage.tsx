@@ -128,8 +128,6 @@ export function FuelExpensesPage() {
     const formattedTripId = isUuid ? tripId : null;
 
     try {
-      setError(null);
-
       // Create a separate call for each active category amount
       if (toll > 0) {
         await api('POST', 'api/expenses', {
