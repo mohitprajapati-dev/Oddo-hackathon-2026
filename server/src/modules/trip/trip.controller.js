@@ -156,7 +156,7 @@ export const updateTripStatus = async (req, res, next) => {
     if (status === "Dispatched") {
       updateData.dispatched_at = new Date().toISOString();
       nextVehicleStatus = "On Trip";
-      nextDriverStatus = "On Trip";
+      nextDriverStatus = "Active";
     } else if (status === "Completed") {
       updateData.completed_at = new Date().toISOString();
       nextVehicleStatus = "Available";
