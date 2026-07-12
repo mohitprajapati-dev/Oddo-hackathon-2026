@@ -170,7 +170,16 @@ export const updateTripStatus = async (req, res, next) => {
     const updatedTrip = await tripService.updateTrip(tripId, updateData);
 
     if (nextVehicleStatus) {
-      await vehicleService.updateVehicle(trip.vehicle_id, { status: nextVehicleStatus });
+      if (status === "Completed" && trip.planned_distance) {
+        const vehicle = await vehicleService.getVehicleById(trip.vehicle_id);
+        const currentOdometer = vehicle?.odometer ? Number(vehicle.odometer) : 0;
+        await vehicleService.updateVehicle(trip.vehicle_id, { 
+          status: nextVehicleStatus,
+          odometer: currentOdometer + Number(trip.planned_distance)
+        });
+      } else {
+        await vehicleService.updateVehicle(trip.vehicle_id, { status: nextVehicleStatus });
+      }
     }
 
     if (nextDriverStatus) {
