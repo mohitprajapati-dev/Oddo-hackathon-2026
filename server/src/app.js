@@ -8,6 +8,7 @@ import driverRoutes from "./modules/driver/driver.routes.js";
 import maintenanceRoutes from "./modules/maintenance/maintenance.routes.js";
 import tripRoutes from "./modules/trip/trip.routes.js";
 import fuelRoutes from "./modules/fuel/fuel.routes.js";
+import expenseRoutes from "./modules/expense/expense.routes.js";
 
 dotenv.config();
 
@@ -26,8 +27,8 @@ app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/drivers", driverRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/trips", tripRoutes);
-
 app.use("/api/fuel", fuelRoutes);
+app.use("/api/expenses", expenseRoutes);
 
 
 app.get("/health", (req, res) => {
