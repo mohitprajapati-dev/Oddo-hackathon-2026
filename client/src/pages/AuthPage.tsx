@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Sparkles, XCircle } from 'lucide-react';
 import { Button, Card, Input, Select } from '../components/common';
+import { cn } from '../utils';
+import api from '../services/api';
 
 type AuthMode = 'login' | 'signup';
 
 interface AuthPageProps {
   mode: AuthMode;
 }
+
 
 const roleOptions = [
   { value: 'Fleet Manager', label: 'Fleet Manager' },
@@ -24,10 +27,49 @@ export function AuthPage({ mode }: AuthPageProps) {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('Fleet Manager');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate('/dashboard');
+    setError(null);
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const res = await api('post', 'api/auth/login', { email, password });
+        const resData = res.data;
+        localStorage.setItem('token', resData.data.token);
+        localStorage.setItem('user', JSON.stringify(resData.data.user));
+        navigate('/dashboard');
+      } else {
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match.');
+        }
+
+        await api('post', 'api/auth/signup', { email, password, fullName, role });
+
+        // Auto-login after signup
+        try {
+          const loginRes = await api('post', 'api/auth/login', { email, password });
+          const loginData = loginRes.data;
+          localStorage.setItem('token', loginData.data.token);
+          localStorage.setItem('user', JSON.stringify(loginData.data.user));
+          navigate('/dashboard');
+        } catch {
+          navigate('/login');
+        }
+      }
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err.message || 'Something went wrong.';
+      setError(errMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,6 +102,8 @@ export function AuthPage({ mode }: AuthPageProps) {
                     label="Full name"
                     placeholder="Arjun Patel"
                     autoComplete="name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     required
                   />
                 )}
@@ -69,6 +113,8 @@ export function AuthPage({ mode }: AuthPageProps) {
                   type="email"
                   placeholder="raven@transitops.in"
                   autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
 
@@ -90,6 +136,8 @@ export function AuthPage({ mode }: AuthPageProps) {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                     className="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
                   />
@@ -101,6 +149,8 @@ export function AuthPage({ mode }: AuthPageProps) {
                     type="password"
                     placeholder="••••••••"
                     autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
                 )}
@@ -129,9 +179,9 @@ export function AuthPage({ mode }: AuthPageProps) {
                   </div>
                 )}
 
-                <Button type="submit" size="lg" className="w-full">
-                  {isLogin ? 'Sign In' : 'Create Account'}
-                  <ArrowRight size={16} />
+                <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                  {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+                  {!loading && <ArrowRight size={16} />}
                 </Button>
               </form>
 
@@ -147,6 +197,7 @@ export function AuthPage({ mode }: AuthPageProps) {
               </div>
             </Card>
 
+
             <div className="max-w-xl space-y-2 pl-1 text-sm text-zinc-500">
               <p className="font-medium text-zinc-400">Access is scoped by role after login:</p>
               <div className="space-y-1.5">
@@ -161,16 +212,21 @@ export function AuthPage({ mode }: AuthPageProps) {
           </div>
 
           <div className="relative mx-auto w-full max-w-sm lg:pt-14">
-            <Card className="relative border-dashed border-rose-400/70 bg-zinc-900/40 p-5 backdrop-blur-sm">
-              <div className="mb-4 flex items-start gap-3 text-rose-300">
-                <XCircle size={20} className="mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-rose-200">Error state</p>
-                  <p className="mt-1 text-sm leading-6 text-rose-200/90">
-                    Invalid credentials. Account locked after 5 failed attempts.
-                  </p>
+            <Card className={cn(
+              "relative bg-zinc-900/40 p-5 backdrop-blur-sm transition-all duration-300",
+              error ? "border-rose-500/50 shadow-lg shadow-rose-950/10" : "border-zinc-800"
+            )}>
+              {error && (
+                <div className="mb-4 flex items-start gap-3 text-rose-300">
+                  <XCircle size={20} className="mt-0.5 shrink-0 text-rose-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-rose-200">Authentication Error</p>
+                    <p className="mt-1 text-sm leading-5 text-rose-200/90">
+                      {error}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-4 text-sm text-zinc-400">
                 <p className="mb-1 font-medium text-zinc-300">Selected role</p>
@@ -182,7 +238,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                 <p>
                   {isLogin
                     ? `Remember me is ${rememberMe ? 'enabled' : 'disabled'}.`
-                    : 'Signup is frontend-only and moves you straight to the dashboard.'}
+                    : 'Signup creates an account and logs you in automatically.'}
                 </p>
               </div>
             </Card>
