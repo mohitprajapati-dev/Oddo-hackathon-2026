@@ -1,6 +1,19 @@
 import vehicleService from "./vehicle.service.js";
 
 class VehicleController {
+  async fetchVehiclesByOnwer(req,res,next){
+    try {
+      const {owner_id}=req.user;
+      const vehicles=await vehicleService.getVehicleByOwner(owner_id);
+      return res.status(200).json({
+        success: true,
+        message: "Vehicles fetched successfully",
+        data: vehicles,
+      });
+    } catch (error) {
+      next(error)
+    }
+  }
   async newVehicle(req, res, next) {
     try {
       const {
@@ -57,13 +70,6 @@ class VehicleController {
         return res.status(400).json({
           success: false,
           message: `status must be one of: ${validStatuses.join(", ")}`,
-        });
-      }
-
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized: User information not found.",
         });
       }
 

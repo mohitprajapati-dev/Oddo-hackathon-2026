@@ -14,6 +14,19 @@ class VehicleService {
     return data;
   }
 
+  async getVehicleByOwner(owner_id){
+    const { data, error } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("owner_id", owner_id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+  return data;
+  }
+
   async createVehicle(vehicleData) {
     const { data, error } = await supabase
       .from("vehicles")

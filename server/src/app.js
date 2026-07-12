@@ -20,7 +20,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/vehicles", vehicleRoutes);
 
 
-
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK" });
 });
