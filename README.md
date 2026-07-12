@@ -1,26 +1,33 @@
-# Oddo Hackathon 2026
+# TransitOps Hackathon
 
-A simple hackathon website built with a modern full-stack setup. The project uses React for the frontend, Node.js and Express for the backend, and Supabase for data and authentication support.
+TransitOps is a fleet and transport operations dashboard built for managing vehicles, drivers, trips, maintenance, fuel expenses, and reporting in one place. The project is split into a modern React frontend and an Express/Supabase backend, making it easier to track operational data and visualize business activity from a single workflow.
 
-## Stack
+## Project Highlights
 
-- React
-- Node.js
-- Express
-- Supabase
+- Authentication screens for login and signup
+- Central dashboard for operational snapshots and quick actions
+- Fleet, driver, trip, maintenance, fuel, analytics, and settings modules
+- Responsive UI built with React, TypeScript, and Vite
+- Backend services organized by feature for easier maintenance
 
-## Project Structure
+## Tech Stack
 
-- `oddo-hackathon/` - Main React frontend application
-- `server/` - Express backend service
-- `client/` - Additional frontend workspace
+- Frontend: React, TypeScript, Vite, React Router, Tailwind CSS
+- UI Utilities: Lucide React, React Hook Form, Recharts
+- Backend: Node.js, Express, Supabase, JWT, CORS
+
+## Repository Structure
+
+- `client/` - React application and UI components
+- `server/` - API, business logic, and database integration
+- `server/schema.sql` - database schema and setup reference
 
 ## Getting Started
 
 ### Frontend
 
 ```bash
-cd oddo-hackathon
+cd client
 npm install
 npm run dev
 ```
@@ -30,13 +37,11 @@ npm run dev
 ```bash
 cd server
 npm install
-npm run start
+npm start
 ```
-
-## Environment Setup
-
-If your Supabase integration requires environment variables, create a local `.env` file in the backend or frontend folder that uses it and add the required keys there.
 
 ## Notes
 
-This repository is structured for a hackathon demo, so the setup is intentionally lightweight and easy to run locally.
+- Configure your Supabase credentials before running the backend.
+- The frontend routes include login, dashboard, fleet, drivers, trips, maintenance, fuel expenses, analytics, and settings.
+- Use `npm run build` inside `client/` to create a production build.
