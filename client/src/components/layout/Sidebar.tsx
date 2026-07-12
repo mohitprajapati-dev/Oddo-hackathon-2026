@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCircle,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '../../utils';
 
@@ -85,6 +86,25 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
             </NavLink>
           ))}
         </nav>
+
+        {/* Logout Button */}
+        <div className="p-3">
+          <button
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('user');
+              window.location.href = '/login';
+            }}
+            className={cn(
+              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-300',
+              collapsed && 'justify-center px-0'
+            )}
+          >
+            <LogOut size={18} className="shrink-0" />
+            {!collapsed && <span>Logout</span>}
+          </button>
+        </div>
 
         {/* Collapse toggle - desktop only */}
         <div className="hidden border-t border-zinc-800 p-3 lg:block">
