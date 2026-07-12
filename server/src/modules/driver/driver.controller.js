@@ -1,4 +1,5 @@
 import * as driverService from "./driver.service.js";
+import nodemailer from "nodemailer";
 
 export const getMyDrivers = async (req, res, next) => {
   try {
@@ -142,6 +143,38 @@ export const addDriver = async (req, res, next) => {
       message: "Driver added/linked to owner successfully",
       data: updatedDriver,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendExpiryEmail = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const driver = await driverService.getDriverDetailsById(id);
+    
+    if (!driver || !driver.email) {
+      return res.status(404).json({ success: false, message: "Driver or driver email not found." });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER || "your-email@gmail.com",
+        pass: process.env.EMAIL_PASS || "your-app-password",
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || "your-email@gmail.com",
+      to: driver.email,
+      subject: "Action Required: License Expiring Soon",
+      text: `Hello ${driver.name || 'Driver'},\n\nYour driver's license (${driver.license_number || 'N/A'}) is set to expire on ${driver.license_expiry}. Please renew it to continue operations.\n\nThank you,\nTransitOps Team`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.status(200).json({ success: true, message: "License expiry warning email sent successfully." });
   } catch (error) {
     next(error);
   }

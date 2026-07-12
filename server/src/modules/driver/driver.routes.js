@@ -9,5 +9,6 @@ router.get("/", protect, driverController.getMyDrivers);
 router.post("/update-details", protect, driverController.updateDriverDetails);
 router.get("/search", protect, driverController.searchDriverByEmail);
 router.post("/add", protect, driverController.addDriver);
+router.post("/:id/send-expiry-email", protect, driverController.sendExpiryEmail);
 
 export default router;
