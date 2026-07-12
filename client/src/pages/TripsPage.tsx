@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Send, FileText, CheckCircle2, XCircle, ArrowRight, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { PageHeader, Card, DataTable, Button, Input, Select, StatusBadge } from '../components/common';
 import api from '../services/api';
+import { useData } from '../context/DataContext';
 
 type TripStatus = 'Pending' | 'Dispatched' | 'Completed' | 'Cancelled';
 type TabFilter = 'All' | TripStatus;
@@ -44,42 +45,55 @@ const lifecycleSteps = [
 const TABS: TabFilter[] = ['All', 'Pending', 'Dispatched', 'Completed', 'Cancelled'];
 
 export function TripsPage() {
+  const {
+    trips: rawTrips, loadingTrips, errorTrips, fetchTrips,
+    vehicles: rawVehicles, fetchVehicles,
+    drivers: rawDrivers, fetchDrivers
+  } = useData();
+
   const [trips, setTrips] = useState<Trip[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabFilter>('All');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (force = false) => {
     try {
-      setLoading(true);
-      setError(null);
-      const [tripsRes, vehiclesRes, driversRes] = await Promise.all([
-        api('GET', 'api/trips'),
-        api('GET', 'api/vehicles'),
-        api('GET', 'api/drivers'),
+      await Promise.all([
+        fetchTrips(force),
+        fetchVehicles(force),
+        fetchDrivers(force),
       ]);
-      setTrips(tripsRes.data?.data || tripsRes.data || []);
-      const vData = Array.isArray(vehiclesRes.data) ? vehiclesRes.data : vehiclesRes.data?.data || [];
-      setVehicles(vData.map((v: any) => ({
+    } catch (err) {
+      console.error('Error fetching trips page data:', err);
+    }
+  }, [fetchTrips, fetchVehicles, fetchDrivers]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  useEffect(() => {
+    if (rawTrips) setTrips(rawTrips);
+  }, [rawTrips]);
+
+  useEffect(() => {
+    if (rawVehicles) {
+      setVehicles(rawVehicles.map((v: any) => ({
         id: v.id,
         registration_number: v.registration_number,
         vehicle_name: v.vehicle_name,
         status: v.status,
       })));
-      const dData = Array.isArray(driversRes.data) ? driversRes.data : driversRes.data?.data || [];
-      setDrivers(dData);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Failed to load data');
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [rawVehicles]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    if (rawDrivers) {
+      setDrivers(rawDrivers);
+    }
+  }, [rawDrivers]);
 
   const filteredTrips = activeTab === 'All' ? trips : trips.filter((t) => t.status === activeTab);
 
@@ -105,7 +119,7 @@ export function TripsPage() {
         return;
       }
       await api('POST', 'api/trips/create', payload);
-      await fetchAll();
+      await fetchAll(true); // force refresh all caches
       (e.target as HTMLFormElement).reset();
     } catch (err: any) {
       setFormError(err?.response?.data?.message || err.message || 'Failed to create trip');
@@ -117,13 +131,13 @@ export function TripsPage() {
   const handleStatusUpdate = async (tripId: string, status: TripStatus) => {
     try {
       await api('POST', `api/trips/${tripId}/status`, { status });
-      setTrips((prev) => prev.map((t) => t.id === tripId ? { ...t, status } : t));
+      await fetchAll(true); // refresh all caches (vehicles/drivers/trips statuses)
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Failed to update trip status');
     }
   };
 
-  if (loading) {
+  if (loadingTrips) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
@@ -140,17 +154,17 @@ export function TripsPage() {
         title="Trip Dispatcher"
         subtitle="Create, dispatch, and track trips"
         action={
-          <Button variant="secondary" onClick={fetchAll}>
+          <Button variant="secondary" onClick={() => fetchAll(true)}>
             <RefreshCw size={14} />
             Refresh
           </Button>
         }
       />
 
-      {error && (
+      {errorTrips && (
         <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
           <AlertTriangle size={18} />
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{errorTrips}</p>
         </Card>
       )}
 

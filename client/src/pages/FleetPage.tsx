@@ -5,23 +5,23 @@ import { useSearch, useModal } from '../hooks';
 import type { Vehicle, VehicleType, VehicleStatus } from '../types';
 import { formatCurrency, formatNumber } from '../utils';
 import api from '../services/api';
+import { useData } from '../context/DataContext';
 
 export function FleetPage() {
+  const { vehicles: rawVehicles, loadingVehicles, errorVehicles, fetchVehicles } = useData();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const { isOpen, open, close } = useModal();
   const { searchQuery, setSearchQuery, filteredItems } = useSearch(vehicles, ['registrationNumber', 'vehicleName', 'vehicleType']);
 
-  const fetchVehicles = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api('GET', 'api/vehicles');
-      const backendData = Array.isArray(res.data) ? res.data : (res.data as any).data || [];
-      const mapped = backendData.map((v: any) => ({
+  useEffect(() => {
+    fetchVehicles();
+  }, [fetchVehicles]);
+
+  useEffect(() => {
+    if (rawVehicles) {
+      const mapped = rawVehicles.map((v: any) => ({
         id: v.id,
         registrationNumber: v.registration_number,
         vehicleName: v.vehicle_name,
@@ -32,23 +32,8 @@ export function FleetPage() {
         status: v.status as VehicleStatus,
       }));
       setVehicles(mapped);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.message || err.message || 'Failed to load vehicles');
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchVehicles();
-  }, []);
-
-  const displayVehicles = filteredItems.filter((v) => {
-    if (filterType !== 'all' && v.vehicleType !== filterType) return false;
-    if (filterStatus !== 'all' && v.status !== filterStatus) return false;
-    return true;
-  });
+  }, [rawVehicles]);
 
   const handleAddVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,19 +49,8 @@ export function FleetPage() {
         status: form.get('status') as string,
       };
 
-      const res = await api('POST', 'api/vehicles', vehicleData);
-      const created = res.data?.data || res.data;
-      const mappedCreated: Vehicle = {
-        id: created.id,
-        registrationNumber: created.registration_number,
-        vehicleName: created.vehicle_name,
-        vehicleType: created.vehicle_type as VehicleType,
-        capacity: Number(created.max_load_capacity),
-        odometer: Number(created.odometer),
-        acquisitionCost: Number(created.acquisition_cost),
-        status: created.status as VehicleStatus,
-      };
-      setVehicles((prev) => [mappedCreated, ...prev]);
+      await api('POST', 'api/vehicles', vehicleData);
+      await fetchVehicles(true); // force refresh vehicles cache
       close();
     } catch (err: any) {
       console.error(err);
@@ -84,7 +58,13 @@ export function FleetPage() {
     }
   };
 
-  if (loading) {
+  const displayVehicles = filteredItems.filter((v) => {
+    if (filterType !== 'all' && v.vehicleType !== filterType) return false;
+    if (filterStatus !== 'all' && v.status !== filterStatus) return false;
+    return true;
+  });
+
+  if (loadingVehicles) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
@@ -105,10 +85,10 @@ export function FleetPage() {
         }
       />
 
-      {error && (
+      {errorVehicles && (
         <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
           <AlertTriangle size={18} />
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{errorVehicles}</p>
         </Card>
       )}
 

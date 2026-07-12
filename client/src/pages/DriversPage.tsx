@@ -3,6 +3,7 @@ import { Plus, Loader2, AlertTriangle, UserSearch } from 'lucide-react';
 import { PageHeader, Card, DataTable, SearchBar, Button, Modal, Input, Select, StatusBadge } from '../components/common';
 import { useSearch, useModal } from '../hooks';
 import api from '../services/api';
+import { useData } from '../context/DataContext';
 
 interface Driver {
   id: string;
@@ -17,9 +18,8 @@ interface Driver {
 }
 
 export function DriversPage() {
+  const { drivers: rawDrivers, loadingDrivers, errorDrivers, fetchDrivers } = useData();
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [searchEmail, setSearchEmail] = useState('');
@@ -33,21 +33,15 @@ export function DriversPage() {
     ['name', 'email', 'license_number', 'contact_number']
   );
 
-  const fetchDrivers = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api('GET', 'api/drivers');
-      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
-      setDrivers(data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Failed to load drivers');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
 
-  useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+  useEffect(() => {
+    if (rawDrivers) {
+      setDrivers(rawDrivers);
+    }
+  }, [rawDrivers]);
 
   const handleSearchDriver = async () => {
     if (!searchEmail.trim()) return;
@@ -70,7 +64,7 @@ export function DriversPage() {
     setAddError(null);
     try {
       await api('POST', 'api/drivers/add', { driverId: foundDriver.id });
-      await fetchDrivers();
+      await fetchDrivers(true); // force refresh drivers cache
       close();
       setFoundDriver(null);
       setSearchEmail('');
@@ -89,7 +83,7 @@ export function DriversPage() {
     setAddError(null);
   };
 
-  if (loading) {
+  if (loadingDrivers) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
@@ -110,10 +104,10 @@ export function DriversPage() {
         }
       />
 
-      {error && (
+      {errorDrivers && (
         <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
           <AlertTriangle size={18} />
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{errorDrivers}</p>
         </Card>
       )}
 

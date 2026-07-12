@@ -9,6 +9,19 @@ interface NavbarProps {
 export function Navbar({ onMenuClick }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const fullName = user?.full_name || user?.name || 'Guest User';
+  const role = user?.role || 'Guest';
+
+  const initials = fullName
+    .split(' ')
+    .filter(Boolean)
+    .map((n: string) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-950/80 px-4 backdrop-blur-xl sm:px-6">
       {/* Left side */}
@@ -50,11 +63,11 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         {/* User */}
         <div className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
-            <p className="text-sm font-medium text-zinc-200">Arjun Mehta</p>
-            <Badge variant="info" className="mt-0.5">Dispatcher</Badge>
+            <p className="text-sm font-medium text-zinc-200">{fullName}</p>
+            <Badge variant="info" className="mt-0.5">{role}</Badge>
           </div>
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-sm font-semibold text-zinc-950 shadow-lg shadow-orange-500/20">
-            AM
+            {initials || '??'}
           </div>
         </div>
       </div>
