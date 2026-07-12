@@ -8,3 +8,4 @@ export { MaintenancePage } from './MaintenancePage';
 export { FuelExpensesPage } from './FuelExpensesPage';
 export { AnalyticsPage } from './AnalyticsPage';
 export { SettingsPage } from './SettingsPage';
+export { ProfilePage } from './ProfilePage';

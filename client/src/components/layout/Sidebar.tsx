@@ -10,6 +10,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  UserCircle,
 } from 'lucide-react';
 import { cn } from '../../utils';
 
@@ -22,6 +23,7 @@ const navItems = [
   { label: 'Fuel & Expenses', path: '/fuel-expenses', icon: Fuel },
   { label: 'Analytics', path: '/analytics', icon: BarChart3 },
   { label: 'Settings', path: '/settings', icon: Settings },
+  { label: 'Profile', path: '/profile', icon: UserCircle },
 ];
 
 interface SidebarProps {

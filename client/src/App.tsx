@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppLayout } from './components/layout';
 import { DataProvider } from './context/DataContext';
 import {
@@ -12,6 +12,7 @@ import {
   FuelExpensesPage,
   AnalyticsPage,
   SettingsPage,
+  ProfilePage,
 } from './pages';
 
 function ProtectedRoute() {
@@ -54,6 +55,7 @@ export default function App() {
               <Route path="/fuel-expenses" element={<FuelExpensesPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>
 
@@ -64,4 +66,3 @@ export default function App() {
     </DataProvider>
   );
 }
-
