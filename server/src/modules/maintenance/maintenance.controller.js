@@ -21,7 +21,7 @@ class MaintenanceController {
       }
 
       const newLog = await maintenanceService.createMaintenance({
-        vehicle_id: Number(vehicle_id),
+        vehicle_id,
         description,
         start_date,
         cost: parsedCost,
@@ -41,7 +41,7 @@ class MaintenanceController {
     try {
       const { vehicle_id, status } = req.query;
       const filters = {};
-      if (vehicle_id) filters.vehicle_id = Number(vehicle_id);
+      if (vehicle_id) filters.vehicle_id = vehicle_id;
       if (status) filters.status = status;
 
       const list = await maintenanceService.getMaintenanceList(filters);
@@ -57,7 +57,7 @@ class MaintenanceController {
   async getMaintenanceDetails(req, res, next) {
     try {
       const { id } = req.params;
-      const log = await maintenanceService.getMaintenanceById(Number(id));
+      const log = await maintenanceService.getMaintenanceById(id);
 
       if (!log) {
         return res.status(404).json({
@@ -104,7 +104,7 @@ class MaintenanceController {
         updates.status = status;
       }
 
-      const updated = await maintenanceService.updateMaintenance(Number(id), updates);
+      const updated = await maintenanceService.updateMaintenance(id, updates);
       return res.status(200).json({
         success: true,
         message: "Maintenance record updated successfully.",
@@ -128,7 +128,7 @@ class MaintenanceController {
         });
       }
 
-      const completed = await maintenanceService.completeMaintenance(Number(id), {
+      const completed = await maintenanceService.completeMaintenance(id, {
         cost: parsedCost,
         end_date,
       });
