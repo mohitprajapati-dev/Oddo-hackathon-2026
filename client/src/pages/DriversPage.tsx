@@ -1,33 +1,101 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Loader2, AlertTriangle, UserSearch } from 'lucide-react';
 import { PageHeader, Card, DataTable, SearchBar, Button, Modal, Input, Select, StatusBadge } from '../components/common';
-import { drivers as initialDrivers } from '../data/drivers';
 import { useSearch, useModal } from '../hooks';
-import type { Driver, DriverStatus, LicenseCategory } from '../types';
-import { generateId } from '../utils';
+import api from '../services/api';
+
+interface Driver {
+  id: string;
+  name: string;
+  email: string;
+  license_number: string | null;
+  license_category: string | null;
+  license_expiry: string | null;
+  contact_number: string | null;
+  safety_score: number | null;
+  status: string | null;
+}
 
 export function DriversPage() {
-  const [drivers, setDrivers] = useState(initialDrivers);
-  const { isOpen, open, close } = useModal();
-  const { searchQuery, setSearchQuery, filteredItems } = useSearch(drivers, ['driverName', 'licenseNumber', 'contact']);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [searchEmail, setSearchEmail] = useState('');
+  const [foundDriver, setFoundDriver] = useState<any>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
 
-  const handleAddDriver = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const newDriver: Driver = {
-      id: generateId(),
-      driverName: form.get('driverName') as string,
-      licenseNumber: form.get('licenseNumber') as string,
-      category: form.get('category') as LicenseCategory,
-      licenseExpiry: form.get('licenseExpiry') as string,
-      contact: form.get('contact') as string,
-      tripCompletion: 0,
-      safetyScore: Number(form.get('safetyScore')),
-      status: 'Available' as DriverStatus,
-    };
-    setDrivers((prev) => [newDriver, ...prev]);
-    close();
+  const { isOpen, open, close } = useModal();
+  const { searchQuery, setSearchQuery, filteredItems } = useSearch<Driver>(
+    drivers,
+    ['name', 'email', 'license_number', 'contact_number']
+  );
+
+  const fetchDrivers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api('GET', 'api/drivers');
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setDrivers(data);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err.message || 'Failed to load drivers');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+
+  const handleSearchDriver = async () => {
+    if (!searchEmail.trim()) return;
+    setSearching(true);
+    setSearchError(null);
+    setFoundDriver(null);
+    try {
+      const res = await api('GET', `api/drivers/search?email=${encodeURIComponent(searchEmail)}`);
+      setFoundDriver(res.data?.data);
+    } catch (err: any) {
+      setSearchError(err?.response?.data?.message || 'Driver not found');
+    } finally {
+      setSearching(false);
+    }
   };
+
+  const handleAddDriver = async () => {
+    if (!foundDriver?.id) return;
+    setAddLoading(true);
+    setAddError(null);
+    try {
+      await api('POST', 'api/drivers/add', { driverId: foundDriver.id });
+      await fetchDrivers();
+      close();
+      setFoundDriver(null);
+      setSearchEmail('');
+    } catch (err: any) {
+      setAddError(err?.response?.data?.message || err.message || 'Failed to add driver');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    close();
+    setFoundDriver(null);
+    setSearchEmail('');
+    setSearchError(null);
+    setAddError(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -42,77 +110,122 @@ export function DriversPage() {
         }
       />
 
+      {error && (
+        <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
+          <AlertTriangle size={18} />
+          <p className="text-sm">{error}</p>
+        </Card>
+      )}
+
       <Card className="p-4">
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search drivers..."
-          className="w-full sm:w-72"
+          placeholder="Search drivers by name, email, license..."
+          className="w-full sm:w-96"
         />
       </Card>
 
       <Card>
-        <DataTable
+        <DataTable<Driver>
           columns={[
-            { key: 'driverName', label: 'Driver Name', render: (d) => (
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-xs font-bold text-white">
-                  {d.driverName.split(' ').map(n => n[0]).join('')}
+            {
+              key: 'name', label: 'Driver Name', render: (d) => (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-xs font-bold text-white">
+                    {(d.name || '?').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="font-medium text-zinc-100">{d.name || '—'}</p>
+                    <p className="text-xs text-zinc-500">{d.email}</p>
+                  </div>
                 </div>
-                <span className="font-medium text-zinc-100">{d.driverName}</span>
-              </div>
-            )},
-            { key: 'licenseNumber', label: 'License No.', render: (d) => <span className="font-mono text-xs">{d.licenseNumber}</span> },
-            { key: 'category', label: 'Category' },
-            { key: 'licenseExpiry', label: 'License Expiry' },
-            { key: 'contact', label: 'Contact' },
-            { key: 'tripCompletion', label: 'Trips', render: (d) => (
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800">
-                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${d.tripCompletion}%` }} />
-                </div>
-                <span className="text-xs text-zinc-400">{d.tripCompletion}%</span>
-              </div>
-            )},
-            { key: 'safetyScore', label: 'Safety', render: (d) => (
-              <span className={`font-medium ${d.safetyScore >= 90 ? 'text-emerald-400' : d.safetyScore >= 75 ? 'text-amber-400' : 'text-red-400'}`}>
-                {d.safetyScore}
-              </span>
-            )},
-            { key: 'status', label: 'Status', render: (d) => <StatusBadge status={d.status} /> },
+              )
+            },
+            { key: 'license_number', label: 'License No.', render: (d) => <span className="font-mono text-xs">{d.license_number || '—'}</span> },
+            { key: 'license_category', label: 'Category', render: (d) => <span>{d.license_category || '—'}</span> },
+            {
+              key: 'license_expiry', label: 'License Expiry', render: (d) => {
+                if (!d.license_expiry) return <span className="text-zinc-500">—</span>;
+                const expiry = new Date(d.license_expiry);
+                const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                const color = daysLeft <= 30 ? 'text-rose-400' : daysLeft <= 90 ? 'text-amber-400' : 'text-zinc-300';
+                return <span className={color}>{expiry.toLocaleDateString('en-IN')}</span>;
+              }
+            },
+            { key: 'contact_number', label: 'Contact', render: (d) => <span className="text-zinc-400">{d.contact_number || '—'}</span> },
+            {
+              key: 'safety_score', label: 'Safety Score', render: (d) => {
+                const s = d.safety_score ?? 0;
+                return (
+                  <span className={`font-semibold ${s >= 90 ? 'text-emerald-400' : s >= 75 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {s}
+                  </span>
+                );
+              }
+            },
+            { key: 'status', label: 'Status', render: (d) => <StatusBadge status={d.status || 'Unknown'} /> },
           ]}
           data={filteredItems}
           keyExtractor={(d) => d.id}
-          emptyMessage="No drivers found"
+          emptyMessage="No drivers found. Add drivers by searching their email."
         />
       </Card>
 
-      {/* Add Driver Modal */}
-      <Modal isOpen={isOpen} onClose={close} title="Add New Driver">
-        <form onSubmit={handleAddDriver} className="space-y-4">
-          <Input name="driverName" label="Driver Name" placeholder="Full name" required />
-          <Input name="licenseNumber" label="License Number" placeholder="DL-XXXXXXXXX" required />
-          <div className="grid grid-cols-2 gap-4">
-            <Select
-              name="category"
-              label="License Category"
-              options={[
-                { value: 'A', label: 'Category A' },
-                { value: 'B', label: 'Category B' },
-                { value: 'C', label: 'Category C' },
-                { value: 'D', label: 'Category D' },
-                { value: 'E', label: 'Category E' },
-              ]}
+      {/* Add Driver Modal — search by email then link */}
+      <Modal isOpen={isOpen} onClose={handleClose} title="Add Driver to Fleet">
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-400">
+            Search for a registered driver by their email address. They must have already signed up with the <strong className="text-zinc-200">Driver</strong> role.
+          </p>
+
+          <div className="flex gap-2">
+            <Input
+              label="Driver Email"
+              placeholder="driver@example.com"
+              value={searchEmail}
+              onChange={(e) => setSearchEmail(e.target.value)}
+              className="flex-1"
             />
-            <Input name="licenseExpiry" label="License Expiry" type="date" required />
+            <div className="flex items-end">
+              <Button onClick={handleSearchDriver} disabled={searching} variant="secondary">
+                {searching ? <Loader2 size={16} className="animate-spin" /> : <UserSearch size={16} />}
+                Search
+              </Button>
+            </div>
           </div>
-          <Input name="contact" label="Phone Number" placeholder="+91 XXXXX XXXXX" required />
-          <Input name="safetyScore" label="Safety Score" type="number" placeholder="0-100" min="0" max="100" required />
+
+          {searchError && (
+            <p className="rounded-lg border border-rose-900/50 bg-rose-950/20 px-3 py-2 text-sm text-rose-400">
+              {searchError}
+            </p>
+          )}
+
+          {foundDriver && (
+            <div className="rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-4 space-y-2">
+              <p className="text-xs text-emerald-400 font-medium">Driver Found</p>
+              <p className="text-sm font-semibold text-zinc-100">{foundDriver.name || foundDriver.driver_details?.name || '—'}</p>
+              <p className="text-xs text-zinc-400">{foundDriver.email}</p>
+              {foundDriver.driver_details?.license_number && (
+                <p className="font-mono text-xs text-zinc-500">License: {foundDriver.driver_details.license_number}</p>
+              )}
+            </div>
+          )}
+
+          {addError && (
+            <p className="rounded-lg border border-rose-900/50 bg-rose-950/20 px-3 py-2 text-sm text-rose-400">
+              {addError}
+            </p>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" type="button" onClick={close}>Cancel</Button>
-            <Button type="submit">Add Driver</Button>
+            <Button variant="secondary" type="button" onClick={handleClose}>Cancel</Button>
+            <Button onClick={handleAddDriver} disabled={!foundDriver || addLoading}>
+              {addLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              Add to Fleet
+            </Button>
           </div>
-        </form>
+        </div>
       </Modal>
     </div>
   );

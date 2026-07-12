@@ -1,70 +1,158 @@
-import { useState } from 'react';
-import { Send, FileText, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Send, FileText, CheckCircle2, XCircle, ArrowRight, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { PageHeader, Card, DataTable, Button, Input, Select, StatusBadge } from '../components/common';
-import { trips as initialTrips } from '../data/trips';
-import { vehicles } from '../data/vehicles';
-import { drivers } from '../data/drivers';
-import type { Trip, TripStatus } from '../types';
-import { generateId } from '../utils';
+import api from '../services/api';
 
-const lifecycleSteps: { status: TripStatus; icon: React.ElementType; label: string }[] = [
-  { status: 'Draft', icon: FileText, label: 'Draft' },
+type TripStatus = 'Pending' | 'Dispatched' | 'Completed' | 'Cancelled';
+type TabFilter = 'All' | TripStatus;
+
+interface Trip {
+  id: string;
+  vehicle_id: string;
+  driver_id: string;
+  cargo_weight_kg: number;
+  route_details: string | null;
+  status: TripStatus;
+  created_at: string;
+  dispatched_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  vehicles?: { id: string; registration_number: string; vehicle_name: string };
+  drivers?: { id: string; name: string; email: string };
+}
+
+interface Vehicle {
+  id: string;
+  registration_number: string;
+  vehicle_name: string;
+  status: string;
+}
+
+interface Driver {
+  id: string;
+  name: string;
+  status: string | null;
+}
+
+const lifecycleSteps = [
+  { status: 'Pending', icon: FileText, label: 'Pending' },
   { status: 'Dispatched', icon: Send, label: 'Dispatched' },
   { status: 'Completed', icon: CheckCircle2, label: 'Completed' },
   { status: 'Cancelled', icon: XCircle, label: 'Cancelled' },
 ];
 
+const TABS: TabFilter[] = ['All', 'Pending', 'Dispatched', 'Completed', 'Cancelled'];
+
 export function TripsPage() {
-  const [allTrips, setAllTrips] = useState(initialTrips);
-  const [activeTab, setActiveTab] = useState<TripStatus | 'All'>('All');
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabFilter>('All');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const filteredTrips = activeTab === 'All' ? allTrips : allTrips.filter((t) => t.status === activeTab);
+  const fetchAll = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [tripsRes, vehiclesRes, driversRes] = await Promise.all([
+        api('GET', 'api/trips'),
+        api('GET', 'api/vehicles'),
+        api('GET', 'api/drivers'),
+      ]);
+      setTrips(tripsRes.data?.data || tripsRes.data || []);
+      const vData = Array.isArray(vehiclesRes.data) ? vehiclesRes.data : vehiclesRes.data?.data || [];
+      setVehicles(vData.map((v: any) => ({
+        id: v.id,
+        registration_number: v.registration_number,
+        vehicle_name: v.vehicle_name,
+        status: v.status,
+      })));
+      const dData = Array.isArray(driversRes.data) ? driversRes.data : driversRes.data?.data || [];
+      setDrivers(dData);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleCreateTrip = (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const filteredTrips = activeTab === 'All' ? trips : trips.filter((t) => t.status === activeTab);
+
+  const tabCounts = TABS.reduce((acc, tab) => {
+    acc[tab] = tab === 'All' ? trips.length : trips.filter((t) => t.status === tab).length;
+    return acc;
+  }, {} as Record<TabFilter, number>);
+
+  const handleCreateTrip = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setFormError(null);
+    setSubmitting(true);
     const form = new FormData(e.currentTarget);
-    const vehicleId = form.get('vehicle') as string;
-    const driverId = form.get('driver') as string;
-    const vehicle = vehicles.find((v) => v.id === vehicleId);
-    const driver = drivers.find((d) => d.id === driverId);
-
-    const newTrip: Trip = {
-      id: generateId(),
-      tripId: `TRP-2024-${String(allTrips.length + 1).padStart(3, '0')}`,
-      source: form.get('source') as string,
-      destination: form.get('destination') as string,
-      vehicleId,
-      vehicleName: vehicle?.vehicleName || '',
-      driverId,
-      driverName: driver?.driverName || '',
-      cargoWeight: Number(form.get('cargoWeight')),
-      distance: Number(form.get('distance')),
-      status: 'Draft',
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setAllTrips((prev) => [newTrip, ...prev]);
-    (e.target as HTMLFormElement).reset();
+    try {
+      const payload = {
+        vehicle_id: form.get('vehicle_id') as string,
+        driver_id: form.get('driver_id') as string,
+        cargo_weight_kg: Number(form.get('cargo_weight_kg')),
+        route_details: form.get('route_details') as string || null,
+      };
+      if (!payload.vehicle_id || !payload.driver_id) {
+        setFormError('Please select a vehicle and a driver.');
+        return;
+      }
+      await api('POST', 'api/trips/create', payload);
+      await fetchAll();
+      (e.target as HTMLFormElement).reset();
+    } catch (err: any) {
+      setFormError(err?.response?.data?.message || err.message || 'Failed to create trip');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDispatch = (tripId: string) => {
-    setAllTrips((prev) =>
-      prev.map((t) =>
-        t.id === tripId ? { ...t, status: 'Dispatched' as TripStatus, eta: '—' } : t
-      )
+  const handleStatusUpdate = async (tripId: string, status: TripStatus) => {
+    try {
+      await api('POST', `api/trips/${tripId}/status`, { status });
+      setTrips((prev) => prev.map((t) => t.id === tripId ? { ...t, status } : t));
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to update trip status');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
     );
-  };
+  }
 
-  const tabCounts = {
-    All: allTrips.length,
-    Draft: allTrips.filter((t) => t.status === 'Draft').length,
-    Dispatched: allTrips.filter((t) => t.status === 'Dispatched').length,
-    Completed: allTrips.filter((t) => t.status === 'Completed').length,
-    Cancelled: allTrips.filter((t) => t.status === 'Cancelled').length,
-  };
+  const availableVehicles = vehicles.filter((v) => v.status === 'Available');
+  const availableDrivers = drivers.filter((d) => !d.status || d.status === 'Available');
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Trip Dispatcher" subtitle="Create, dispatch, and track trips" />
+      <PageHeader
+        title="Trip Dispatcher"
+        subtitle="Create, dispatch, and track trips"
+        action={
+          <Button variant="secondary" onClick={fetchAll}>
+            <RefreshCw size={14} />
+            Refresh
+          </Button>
+        }
+      />
+
+      {error && (
+        <Card className="flex items-center gap-3 border-rose-900 bg-rose-950/20 p-4 text-rose-300">
+          <AlertTriangle size={18} />
+          <p className="text-sm">{error}</p>
+        </Card>
+      )}
 
       {/* Lifecycle */}
       <Card className="p-5">
@@ -89,35 +177,50 @@ export function TripsPage() {
         <Card className="p-5">
           <h3 className="mb-4 text-sm font-semibold text-zinc-100">Create Trip</h3>
           <form onSubmit={handleCreateTrip} className="space-y-4">
-            <Input name="source" label="Source" placeholder="Origin depot" required />
-            <Input name="destination" label="Destination" placeholder="Destination hub" required />
             <Select
-              name="vehicle"
+              name="vehicle_id"
               label="Vehicle"
               options={[
-                { value: '', label: 'Select vehicle...' },
-                ...vehicles
-                  .filter((v) => v.status === 'Available')
-                  .map((v) => ({ value: v.id, label: `${v.vehicleName} (${v.registrationNumber})` })),
+                { value: '', label: availableVehicles.length ? 'Select vehicle...' : 'No available vehicles' },
+                ...availableVehicles.map((v) => ({
+                  value: v.id,
+                  label: `${v.vehicle_name} (${v.registration_number})`,
+                })),
               ]}
             />
             <Select
-              name="driver"
+              name="driver_id"
               label="Driver"
               options={[
-                { value: '', label: 'Select driver...' },
-                ...drivers
-                  .filter((d) => d.status === 'Available')
-                  .map((d) => ({ value: d.id, label: d.driverName })),
+                { value: '', label: availableDrivers.length ? 'Select driver...' : 'No available drivers' },
+                ...availableDrivers.map((d) => ({
+                  value: d.id,
+                  label: d.name || d.id,
+                })),
               ]}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <Input name="cargoWeight" label="Cargo (kg)" type="number" placeholder="0" required />
-              <Input name="distance" label="Distance (km)" type="number" placeholder="0" required />
-            </div>
-            <Button type="submit" className="w-full">
-              <Send size={14} />
-              Create Draft Trip
+            <Input
+              name="cargo_weight_kg"
+              label="Cargo Weight (kg)"
+              type="number"
+              placeholder="0"
+              required
+            />
+            <Input
+              name="route_details"
+              label="Route Details (optional)"
+              placeholder="e.g. Mumbai → Pune via NH-48"
+            />
+
+            {formError && (
+              <p className="rounded-lg border border-rose-900/50 bg-rose-950/20 px-3 py-2 text-sm text-rose-400">
+                {formError}
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Create Trip
             </Button>
           </form>
         </Card>
@@ -127,7 +230,7 @@ export function TripsPage() {
           <div className="border-b border-zinc-800 px-5 py-4">
             <h3 className="text-sm font-semibold text-zinc-100">Live Trip Board</h3>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(['All', 'Draft', 'Dispatched', 'Completed', 'Cancelled'] as const).map((tab) => (
+              {TABS.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -145,20 +248,55 @@ export function TripsPage() {
               ))}
             </div>
           </div>
-          <DataTable
+          <DataTable<Trip>
             columns={[
-              { key: 'tripId', label: 'Trip ID', render: (t) => <span className="font-mono text-xs text-zinc-400">{t.tripId}</span> },
-              { key: 'vehicleName', label: 'Vehicle' },
-              { key: 'driverName', label: 'Driver' },
+              {
+                key: 'id', label: 'Trip ID',
+                render: (t) => <span className="font-mono text-xs text-zinc-400">{t.id.slice(0, 8)}</span>
+              },
+              {
+                key: 'vehicle_id', label: 'Vehicle',
+                render: (t) => (
+                  <div>
+                    <p className="text-sm text-zinc-200">{t.vehicles?.vehicle_name || '—'}</p>
+                    <p className="font-mono text-xs text-zinc-500">{t.vehicles?.registration_number || ''}</p>
+                  </div>
+                )
+              },
+              {
+                key: 'driver_id', label: 'Driver',
+                render: (t) => <span>{t.drivers?.name || '—'}</span>
+              },
+              {
+                key: 'cargo_weight_kg', label: 'Cargo',
+                render: (t) => <span className="text-zinc-400">{t.cargo_weight_kg} kg</span>
+              },
               { key: 'status', label: 'Status', render: (t) => <StatusBadge status={t.status} /> },
-              { key: 'actions', label: '', render: (t) => (
-                t.status === 'Draft' ? (
-                  <Button size="sm" variant="secondary" onClick={() => handleDispatch(t.id)}>
-                    <Send size={12} />
-                    Dispatch
-                  </Button>
-                ) : null
-              )},
+              {
+                key: 'actions', label: '',
+                render: (t) => (
+                  <div className="flex gap-2">
+                    {t.status === 'Pending' && (
+                      <Button size="sm" variant="secondary" onClick={() => handleStatusUpdate(t.id, 'Dispatched')}>
+                        <Send size={12} />
+                        Dispatch
+                      </Button>
+                    )}
+                    {t.status === 'Dispatched' && (
+                      <Button size="sm" variant="secondary" onClick={() => handleStatusUpdate(t.id, 'Completed')}>
+                        <CheckCircle2 size={12} />
+                        Complete
+                      </Button>
+                    )}
+                    {(t.status === 'Pending' || t.status === 'Dispatched') && (
+                      <Button size="sm" variant="ghost" onClick={() => handleStatusUpdate(t.id, 'Cancelled')}>
+                        <XCircle size={12} />
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                )
+              },
             ]}
             data={filteredTrips}
             keyExtractor={(t) => t.id}

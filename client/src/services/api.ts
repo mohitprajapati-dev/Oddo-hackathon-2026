@@ -16,6 +16,24 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+interface FailedRequest {
+  resolve: (value: string | null) => void;
+  reject: (err: any) => void;
+}
+let failedQueue: FailedRequest[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 /* interceptor for refresh token */
 client.interceptors.response.use(
   (response) => response,
@@ -23,20 +41,58 @@ client.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise<string | null>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return client(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
-      await axios.post(
-        `${BACKEND_URL}/api/auth/refresh`,
-        {},
-        { withCredentials: true }
-      );
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (refreshToken) {
+        try {
+          const res = await axios.post(
+            `${BACKEND_URL}/api/auth/refresh`,
+            { refreshToken },
+            { withCredentials: true }
+          );
 
-      return client(originalRequest);
+          const { token, refreshToken: newRefreshToken } = res.data.data;
+          localStorage.setItem("token", token);
+          localStorage.setItem("refreshToken", newRefreshToken);
+
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+          }
+
+          processQueue(null, token);
+          return client(originalRequest);
+        } catch (refreshErr) {
+          processQueue(refreshErr, null);
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+          return Promise.reject(refreshErr);
+        } finally {
+          isRefreshing = false;
+        }
+      }
     }
 
     return Promise.reject(error);
   }
 );
+
 
 const api = async <T = any>(method: string, url: string, data: any = null): Promise<{ data: T }> => {
   try {
