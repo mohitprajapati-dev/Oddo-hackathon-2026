@@ -4,7 +4,7 @@ export const getDashboardSummary = async (req, res, next) => {
   try {
     const { id, role } = req.user;
     let data;
-
+    console.lof(`{id} {role}`);
     if (role === "Fleet Manager") {
       data = await dashboardService.getFleetManagerSummary(id);
     } else if (role === "Driver") {
