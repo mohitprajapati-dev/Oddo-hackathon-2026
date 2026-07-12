@@ -17,7 +17,7 @@ export function Input({ label, error, className, id, ...props }: InputProps) {
       <input
         id={inputId}
         className={cn(
-          'w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500',
+          'w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500',
           error && 'border-red-500/50 focus:border-red-500 focus:ring-red-500',
           className
         )}
@@ -45,7 +45,7 @@ export function Select({ label, options, className, id, ...props }: SelectProps)
       <select
         id={selectId}
         className={cn(
-          'w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3.5 py-2.5 text-sm text-zinc-100 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 appearance-none',
+          'w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3.5 py-2.5 text-sm text-zinc-100 transition-colors focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 appearance-none',
           className
         )}
         {...props}
@@ -76,7 +76,7 @@ export function Textarea({ label, className, id, ...props }: TextareaProps) {
       <textarea
         id={textareaId}
         className={cn(
-          'w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 resize-none',
+          'w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none',
           className
         )}
         {...props}

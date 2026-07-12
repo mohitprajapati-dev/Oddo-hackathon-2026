@@ -51,12 +51,12 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-zinc-800 px-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500">
             <Truck size={18} className="text-white" />
           </div>
           {!collapsed && (
             <span className="text-base font-bold tracking-tight text-zinc-100">
-              Transit<span className="text-emerald-400">Ops</span>
+              Transit<span className="text-amber-400">Ops</span>
             </span>
           )}
         </div>
@@ -72,7 +72,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
                 cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                   isActive
-                    ? 'bg-zinc-800/80 text-zinc-100 shadow-sm'
+                    ? 'bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20 shadow-sm'
                     : 'text-zinc-500 hover:bg-zinc-800/40 hover:text-zinc-300',
                   collapsed && 'justify-center px-0'
                 )

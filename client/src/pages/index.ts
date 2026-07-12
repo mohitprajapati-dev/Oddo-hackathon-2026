@@ -1,4 +1,5 @@
 export { DashboardPage } from './DashboardPage';
+export { AuthPage } from './AuthPage';
 export { FleetPage } from './FleetPage';
 export { DriversPage } from './DriversPage';
 export { TripsPage } from './TripsPage';
