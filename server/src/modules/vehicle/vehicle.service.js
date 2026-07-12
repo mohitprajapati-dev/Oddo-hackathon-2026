@@ -1,7 +1,7 @@
 import { supabase } from "../../utils/supabase.js";
 
-class VehicleService {
-  async getVehicleByRegistrationNumber(registrationNumber) {
+
+ export const getVehicleByRegistrationNumber=async(registrationNumber)=>{
     const { data, error } = await supabase
       .from("vehicles")
       .select("*")
@@ -14,7 +14,7 @@ class VehicleService {
     return data;
   }
 
-  async getVehicleByOwner(owner_id){
+ export const getVehicleByOwner=async(owner_id)=>{
     const { data, error } = await supabase
     .from("vehicles")
     .select("*")
@@ -27,7 +27,7 @@ class VehicleService {
   return data;
   }
 
-  async createVehicle(vehicleData) {
+ export const createVehicle=async(vehicleData)=>{
     const { data, error } = await supabase
       .from("vehicles")
       .insert([vehicleData])
@@ -39,6 +39,20 @@ class VehicleService {
     }
     return data;
   }
-}
 
-export default new VehicleService();
+
+export const updateVehicle=async(vehicleId,data)=>{
+    const { data:updatedVehicle, error } = await supabase
+      .from("vehicles")
+      .update(data)
+      .eq("id", vehicleId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    return updatedVehicle;
+  }
+
+

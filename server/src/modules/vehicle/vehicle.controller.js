@@ -1,7 +1,7 @@
-import vehicleService from "./vehicle.service.js";
+import * as vehicleService from "./vehicle.service.js";
 
-class VehicleController {
-  async fetchVehiclesByOnwer(req,res,next){
+
+ export const fetchVehiclesByOnwer=async(req,res,next)=>{
     try {
       const {owner_id}=req.user;
       const vehicles=await vehicleService.getVehicleByOwner(owner_id);
@@ -14,7 +14,7 @@ class VehicleController {
       next(error)
     }
   }
-  async newVehicle(req, res, next) {
+export const newVehicle=async(req, res, next)=>{
     try {
       const {
         registration_number,
@@ -106,6 +106,59 @@ class VehicleController {
       next(error);
     }
   }
+
+  export const updateVehicleStatus=async(req,res,next)=>{
+    try {
+        const {vehicleId,status}=req.body;
+        const validStatuses = ["Available", "On Trip", "In Shop", "Retired"];
+      const finalStatus = status || "Available";
+      if (!validStatuses.includes(finalStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: `status must be one of: ${validStatuses.join(", ")}`,
+        });
+      }
+
+      const vehicle = await vehicleService.getVehicleByOwner(vehicleId);
+      if (!vehicle) {
+        return res.status(400).json({
+          success: false,
+          message: "Vehicle not found.",
+        });
+      }
+      const updatedVehicle = await vehicleService.updateVehicle(vehicleId, {
+        status: finalStatus,
+      });
+      return res.status(200).json({
+        success: true,
+        message: "Vehicle status updated successfully",
+        data: updatedVehicle,
+      });
+    } catch (error) {
+        next(error);
+    }
+  }
+
+export const updateOdometer=async(req,res,next)=>{
+    try {
+        const {vehicleId,odometer}=req.body;
+        const vehicle = await vehicleService.getVehicleByOwner(vehicleId);
+        if (!vehicle) {
+            return res.status(400).json({
+            success: false,
+            message: "Vehicle not found.",
+            });
+        }
+        const updatedVehicle = await vehicleService.updateVehicle(vehicleId, {
+            odometer: odometer,
+        });
+        return res.status(200).json({
+            success: true,
+            message: "Odometer updated successfully",
+            data: updatedVehicle,
+        });
+    } catch (error) {
+        next(error);
+    }
 }
 
-export default new VehicleController();
