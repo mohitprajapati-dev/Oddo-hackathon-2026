@@ -53,7 +53,6 @@ PORT=5001
 FRONTEND_PORT=5173
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_KEY=your_supabase_anon_or_service_key
-SUPABASE_JWT_SECRET=your_supabase_jwt_signing_secret (Optional: enables local HS256 validation)
 ```
 
 ---
