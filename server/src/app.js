@@ -22,7 +22,7 @@ const app = express();
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
-  max: 100,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false, 
   message: {
@@ -39,7 +39,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Apply the rate limiting middleware to all requests
+
 app.use(limiter);
 
 app.use("/api/vehicles", vehicleRoutes);
