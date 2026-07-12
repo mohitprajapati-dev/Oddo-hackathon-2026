@@ -99,3 +99,17 @@ export const assignOwnerToDriver = async (driverId, ownerId, driverName) => {
     return data;
   }
 };
+
+export const updateDriver = async (driverId, data) => {
+  const { data: updatedDriver, error } = await supabase
+    .from("drivers")
+    .update(data)
+    .eq("id", driverId)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+  return updatedDriver;
+};

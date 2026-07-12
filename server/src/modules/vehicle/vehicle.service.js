@@ -14,18 +14,31 @@ import { supabase } from "../../utils/supabase.js";
     return data;
   }
 
- export const getVehicleByOwner=async(owner_id)=>{
-    const { data, error } = await supabase
+export const getVehicleByOwner = async (owner_id) => {
+  const { data, error } = await supabase
     .from("vehicles")
     .select("*")
-    .eq("owner_id", owner_id)
+    .eq("owner_id", owner_id);
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
+export const getVehicleById = async (vehicleId) => {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("id", vehicleId)
     .maybeSingle();
 
   if (error) {
     throw error;
   }
   return data;
-  }
+};
+
 
  export const createVehicle=async(vehicleData)=>{
     const { data, error } = await supabase

@@ -24,6 +24,7 @@ export const updateDriverDetails = async (req, res, next) => {
 
     const driverData = {
       name: finalName,
+      email: req.user.email,
       license_number,
       license_category,
       license_expiry,

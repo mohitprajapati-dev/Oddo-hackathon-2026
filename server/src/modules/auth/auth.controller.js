@@ -22,7 +22,7 @@ export const signup = async (req, res, next) => {
 
     const result = await authService.signUpUser(email, password, fullName, role);
     if(role==="Driver"){
-      await driverService.createDriver(result.user.id,fullName,email);
+      await createDriver(result.user.id,fullName,email);
     }   
     return res.status(201).json({
       success: true,

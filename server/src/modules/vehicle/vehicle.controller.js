@@ -1,19 +1,19 @@
 import * as vehicleService from "./vehicle.service.js";
 
 
- export const fetchVehiclesByOnwer=async(req,res,next)=>{
-    try {
-      const {owner_id}=req.user;
-      const vehicles=await vehicleService.getVehicleByOwner(owner_id);
-      return res.status(200).json({
-        success: true,
-        message: "Vehicles fetched successfully",
-        data: vehicles,
-      });
-    } catch (error) {
-      next(error)
-    }
+export const fetchVehiclesByOnwer = async (req, res, next) => {
+  try {
+    const owner_id = req.user.id;
+    const vehicles = await vehicleService.getVehicleByOwner(owner_id);
+    return res.status(200).json({
+      success: true,
+      message: "Vehicles fetched successfully",
+      data: vehicles,
+    });
+  } catch (error) {
+    next(error);
   }
+};
 export const newVehicle=async(req, res, next)=>{
     try {
       const {
@@ -119,7 +119,7 @@ export const newVehicle=async(req, res, next)=>{
         });
       }
 
-      const vehicle = await vehicleService.getVehicleByOwner(vehicleId);
+      const vehicle = await vehicleService.getVehicleById(vehicleId);
       if (!vehicle) {
         return res.status(400).json({
           success: false,
@@ -142,7 +142,7 @@ export const newVehicle=async(req, res, next)=>{
 export const updateOdometer=async(req,res,next)=>{
     try {
         const {vehicleId,odometer}=req.body;
-        const vehicle = await vehicleService.getVehicleByOwner(vehicleId);
+        const vehicle = await vehicleService.getVehicleById(vehicleId);
         if (!vehicle) {
             return res.status(400).json({
             success: false,
