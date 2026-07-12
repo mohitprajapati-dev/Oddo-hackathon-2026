@@ -13,18 +13,34 @@ import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import reportRoutes from "./modules/report/report.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
 
+import rateLimit from "express-rate-limit";
+
 dotenv.config();
 
 const app = express();
+
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false, 
+  message: {
+    status: 429,
+    message: "Too many requests from this IP, please try again after 15 minutes",
+  }
+});
 
 app.use(cors({
   origin: `${process.env.FRONTEND_URL}`,
   credentials: true
 }));
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Apply the rate limiting middleware to all requests
+app.use(limiter);
 
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/drivers", driverRoutes);
