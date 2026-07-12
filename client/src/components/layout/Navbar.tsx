@@ -34,7 +34,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         </button>
 
         {/* Search */}
-        <div className="relative hidden sm:block">
+        {/* <div className="relative hidden sm:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={15} />
           <input
             type="text"
@@ -46,7 +46,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-500">
             ⌘K
           </kbd>
-        </div>
+        </div> */}
       </div>
 
       {/* Right side */}

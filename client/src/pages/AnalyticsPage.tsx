@@ -3,8 +3,65 @@ import { Fuel, Activity, DollarSign, TrendingUp, Download, Loader2 } from 'lucid
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { KPICard, ChartCard, PageHeader, Button, Card } from '../components/common';
 import api from '../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+async function downloadDataAsPDF(title: string, data: any[], filename: string, chartId?: string) {
+  if (!data || data.length === 0) {
+    alert("No data available to export.");
+    return;
+  }
+  
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text(title, 14, 15);
+  
+  let currentY = 20;
+
+  // if (chartId) {
+  //   const chartEl = document.getElementById(chartId);
+  //   if (chartEl) {
+  //     try {
+  //       // Temporarily set a specific style to help html2canvas render the SVG
+  //       const canvas = await html2canvas(chartEl, { 
+  //         backgroundColor: '#18181b', // matching zinc-950 background
+  //         scale: 2,
+  //         logging: false
+  //       });
+  //       const imgData = canvas.toDataURL('image/png');
+  //       const pdfWidth = doc.internal.pageSize.getWidth() - 28;
+  //       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+  //       doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth, pdfHeight);
+  //       currentY += pdfHeight + 10;
+  //     } catch (err: any) {
+  //       console.error("Failed to capture chart image:", err);
+  //       alert("Warning: Failed to capture chart image for PDF. Reason: " + (err.message || err));
+  //     }
+  //   }
+  // }
+
+  const columns = Object.keys(data[0]);
+  const rows = data.map(item => columns.map(col => {
+    const val = item[col];
+    if (val === null || val === undefined) return '';
+    return String(val);
+  }));
+  
+  autoTable(doc, {
+    startY: currentY,
+    head: [columns],
+    body: rows,
+    theme: 'striped',
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [63, 63, 70] },
+  });
+  
+  doc.save(`${filename}.pdf`);
+}
 
 const chartTooltipStyle = {
   contentStyle: {
@@ -135,18 +192,35 @@ export function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader title="Analytics" subtitle="Fleet performance metrics and insights — real-time data" />
-        <div className="flex gap-2">
-          <Button onClick={() => downloadCSV('api/reports/fuel-efficiency', 'fuel_efficiency')}>
-            <Download size={14} /> Fuel CSV
-          </Button>
-          <Button onClick={() => downloadCSV('api/reports/operational-cost', 'operational_cost')}>
-            <Download size={14} /> Cost CSV
-          </Button>
-          <Button onClick={() => downloadCSV('api/reports/vehicle-roi', 'vehicle_roi')}>
-            <Download size={14} /> ROI CSV
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          <div className="flex gap-1 rounded-lg bg-zinc-800/50 p-1">
+            <Button variant="secondary" onClick={() => downloadCSV('api/reports/fuel-efficiency', 'fuel_efficiency')}>
+              <Download size={14} /> Fuel CSV
+            </Button>
+            <Button variant="secondary" onClick={() => downloadDataAsPDF('Fuel Efficiency Report', fuelData, 'fuel_efficiency', 'chart-fuel-efficiency')}>
+              <Download size={14} /> PDF
+            </Button>
+          </div>
+          
+          <div className="flex gap-1 rounded-lg bg-zinc-800/50 p-1">
+            <Button variant="secondary" onClick={() => downloadCSV('api/reports/operational-cost', 'operational_cost')}>
+              <Download size={14} /> Cost CSV
+            </Button>
+            <Button variant="secondary" onClick={() => downloadDataAsPDF('Operational Cost Report', costData?.vehicles || [], 'operational_cost', 'chart-operational-cost')}>
+              <Download size={14} /> PDF
+            </Button>
+          </div>
+          
+          <div className="flex gap-1 rounded-lg bg-zinc-800/50 p-1">
+            <Button variant="secondary" onClick={() => downloadCSV('api/reports/vehicle-roi', 'vehicle_roi')}>
+              <Download size={14} /> ROI CSV
+            </Button>
+            <Button variant="secondary" onClick={() => downloadDataAsPDF('Vehicle ROI Report', roiData, 'vehicle_roi', 'chart-roi')}>
+              <Download size={14} /> PDF
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -176,40 +250,42 @@ export function AnalyticsPage() {
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ChartCard title="Fuel Efficiency by Vehicle" subtitle="km/L per vehicle">
-          {fuelChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={fuelChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={60} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip {...chartTooltipStyle} formatter={(value: any) => `${value} km/L`} />
-                <Bar dataKey="efficiency" fill="#06b6d4" radius={[4, 4, 0, 0]} name="Efficiency (km/L)" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex h-[280px] items-center justify-center text-zinc-500 text-sm">No fuel data available</div>
-          )}
-        </ChartCard>
+        <div id="chart-fuel-efficiency" className="h-full">
+          <ChartCard title="Fuel Efficiency by Vehicle" subtitle="km/L per vehicle">
+            {fuelChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={fuelChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={60} />
+                  <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip {...chartTooltipStyle} formatter={(value: any) => `${value} km/L`} />
+                  <Bar dataKey="efficiency" fill="#06b6d4" radius={[4, 4, 0, 0]} name="Efficiency (km/L)" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[280px] items-center justify-center text-zinc-500 text-sm">No fuel data available</div>
+            )}
+          </ChartCard>
+        </div>
 
-        <ChartCard title="Top Costliest Vehicles" subtitle="Total cost (acquisition + operational)">
-          {roiChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={roiChartData.sort((a: any, b: any) => b.totalCost - a.totalCost).slice(0, 8)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 1000}k`} />
-                <YAxis type="category" dataKey="vehicleName" tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} width={130} />
-                <Tooltip {...chartTooltipStyle} formatter={(value: any) => formatCurrency(value)} />
-                <Bar dataKey="totalCost" fill="#8b5cf6" radius={[0, 4, 4, 0]} name="Total Cost" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex h-[280px] items-center justify-center text-zinc-500 text-sm">No ROI data available</div>
-          )}
-        </ChartCard>
-      </div>
-
-      {/* Charts Row 2 */}
+        <div id="chart-roi" className="h-full">
+          <ChartCard title="Top Costliest Vehicles" subtitle="Total cost (acquisition + operational)">
+            {roiChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={roiChartData.sort((a: any, b: any) => b.totalCost - a.totalCost).slice(0, 8)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+                  <XAxis type="number" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 1000}k`} />
+                  <YAxis type="category" dataKey="vehicleName" tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} width={130} />
+                  <Tooltip {...chartTooltipStyle} formatter={(value: any) => formatCurrency(value)} />
+                  <Bar dataKey="totalCost" fill="#8b5cf6" radius={[0, 4, 4, 0]} name="Total Cost" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[280px] items-center justify-center text-zinc-500 text-sm">No ROI data available</div>
+            )}
+          </ChartCard>
+        </div>
+      </div>      {/* Charts Row 2 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ChartCard title="Fuel Consumption by Vehicle" subtitle="Total liters consumed">
           {fuelChartData.length > 0 ? (
@@ -233,25 +309,27 @@ export function AnalyticsPage() {
           )}
         </ChartCard>
 
-        <ChartCard title="Operational Cost Breakdown" subtitle="Cost by category per vehicle">
-          {costBreakdownData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={costBreakdownData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={60} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-                <Tooltip {...chartTooltipStyle} formatter={(value: any) => formatCurrency(value)} />
-                <Legend wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }} />
-                <Bar dataKey="fuel" stackId="a" fill="#f59e0b" name="Fuel" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="maintenance" stackId="a" fill="#8b5cf6" name="Maintenance" />
-                <Bar dataKey="toll" stackId="a" fill="#06b6d4" name="Toll" />
-                <Bar dataKey="other" stackId="a" fill="#64748b" name="Other" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex h-[280px] items-center justify-center text-zinc-500 text-sm">No cost data available</div>
-          )}
-        </ChartCard>
+        <div id="chart-operational-cost" className="h-full">
+          <ChartCard title="Operational Cost Breakdown" subtitle="Cost by category per vehicle">
+            {costBreakdownData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={costBreakdownData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={60} />
+                  <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                  <Tooltip {...chartTooltipStyle} formatter={(value: any) => formatCurrency(value)} />
+                  <Legend wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }} />
+                  <Bar dataKey="fuel" stackId="a" fill="#f59e0b" name="Fuel" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="maintenance" stackId="a" fill="#8b5cf6" name="Maintenance" />
+                  <Bar dataKey="toll" stackId="a" fill="#06b6d4" name="Toll" />
+                  <Bar dataKey="other" stackId="a" fill="#64748b" name="Other" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[280px] items-center justify-center text-zinc-500 text-sm">No cost data available</div>
+            )}
+          </ChartCard>
+        </div>
       </div>
 
       {/* Fleet Utilization Summary */}

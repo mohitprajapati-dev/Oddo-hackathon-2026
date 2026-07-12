@@ -24,10 +24,10 @@ function FleetManagerDashboard({ data }: { data: any }) {
         <KPICard title="Total Vehicles" value={kpis.totalVehicles} icon={<Truck size={20} />} />
         <KPICard title="Available" value={kpis.availableVehicles} icon={<CheckCircle size={20} />} />
         <KPICard title="In Maintenance" value={kpis.inShopVehicles} icon={<Wrench size={20} />} />
-        <KPICard title="Active Trips" value={kpis.activeTrips} icon={<Route size={20} />} trend={{ value: 12, positive: true }} />
+        <KPICard title="Active Trips" value={kpis.activeTrips} icon={<Route size={20} />} />
         <KPICard title="Pending Trips" value={kpis.pendingTrips} icon={<Clock size={20} />} />
         <KPICard title="Drivers On Duty" value={kpis.driversOnDuty} icon={<Users size={20} />} />
-        <KPICard title="Fleet Utilization" value={`${kpis.fleetUtilization}%`} icon={<Activity size={20} />} trend={{ value: 3.1, positive: true }} />
+        <KPICard title="Fleet Utilization" value={`${kpis.fleetUtilization}%`} icon={<Activity size={20} />} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -92,7 +92,7 @@ function DriverDashboard({ data }: { data: any }) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard title="Total Trips" value={kpis.totalTrips} icon={<Route size={20} />} />
-        <KPICard title="Completed" value={kpis.completedTrips} icon={<CheckCircle size={20} />} trend={{ value: 5, positive: true }} />
+        <KPICard title="Completed" value={kpis.completedTrips} icon={<CheckCircle size={20} />} />
         <KPICard title="In Progress" value={kpis.activeTrips} icon={<Activity size={20} />} />
         <KPICard title="Scheduled" value={kpis.scheduledTrips} icon={<Clock size={20} />} />
       </div>

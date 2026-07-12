@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Loader2, AlertTriangle, UserSearch } from 'lucide-react';
+import { Plus, Loader2, AlertTriangle, UserSearch, MailWarning } from 'lucide-react';
 import { PageHeader, Card, DataTable, SearchBar, Button, Modal, Input, Select, StatusBadge } from '../components/common';
 import { useSearch, useModal } from '../hooks';
 import api from '../services/api';
@@ -26,6 +26,7 @@ export function DriversPage() {
   const [foundDriver, setFoundDriver] = useState<any>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   const { isOpen, open, close } = useModal();
   const { searchQuery, setSearchQuery, filteredItems } = useSearch<Driver>(
@@ -55,6 +56,19 @@ export function DriversPage() {
       setSearchError(err?.response?.data?.message || 'Driver not found');
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleSendExpiryEmail = async (driverId: string) => {
+    if (sendingEmail) return;
+    setSendingEmail(driverId);
+    try {
+      await api('POST', `api/drivers/${driverId}/send-expiry-email`);
+      alert('Email sent successfully!');
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to send email.');
+    } finally {
+      setSendingEmail(null);
     }
   };
 
@@ -144,7 +158,21 @@ export function DriversPage() {
                 const expiry = new Date(d.license_expiry);
                 const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                 const color = daysLeft <= 30 ? 'text-rose-400' : daysLeft <= 90 ? 'text-amber-400' : 'text-zinc-300';
-                return <span className={color}>{expiry.toLocaleDateString('en-IN')}</span>;
+                return (
+                  <div className="flex items-center gap-3">
+                    <span className={color}>{expiry.toLocaleDateString('en-IN')}</span>
+                    {daysLeft <= 30 && (
+                      <button 
+                        onClick={() => handleSendExpiryEmail(d.id)}
+                        disabled={sendingEmail === d.id}
+                        className="p-1.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Send Expiry Warning Email"
+                      >
+                        {sendingEmail === d.id ? <Loader2 size={14} className="animate-spin" /> : <MailWarning size={14} />}
+                      </button>
+                    )}
+                  </div>
+                );
               }
             },
             { key: 'contact_number', label: 'Contact', render: (d) => <span className="text-zinc-400">{d.contact_number || '—'}</span> },
